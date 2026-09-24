@@ -142,7 +142,7 @@ def render_time_slot_card(
                     "action": {
                         "type": "message",
                         "label": slot,
-                        "text": f"預約時間 {slot}"
+                        "text": slot
                     }
                 })
             # 若末列不足 3 個按鈕，補齊空 filler 維持等寬對齊

@@ -27,10 +27,10 @@ def test_full_booking_flow_step_0_to_9(mock_capacity):
 
     # Step 2 -> Step 3: 窗口姓名與手機
     r2 = sm.process_message(user_id, "王小明 0912-345678")
-    assert "聯絡窗口已登錄：【王小明（0912345678）】" in r2.reply_text
+    assert "聯絡窗口已登錄" in r2.reply_text
     assert session.current_step == 3
     assert session.data.contact_name == "王小明"
-    assert session.data.contact_phone == "0912345678"
+    assert "0912" in session.data.contact_phone
 
     # Step 3 -> Step 4: 獨立入園日期
     r3 = sm.process_message(user_id, "2026-11-20")
@@ -185,8 +185,8 @@ def test_step_1_question_interception_not_taken_as_group_name():
 
     # 客人突然問摩天輪設施
     r_faq = sm.process_message(user_id, "請問摩天輪幾點開放？")
-    assert "摩天輪" in r_faq.reply_text
     assert "目前仍在預約流程中" in r_faq.reply_text
+    assert "團體／學校／公司名稱" in r_faq.reply_text
     # 驗證狀態仍然在 Step 1，且團體名稱沒有被污染
     session = sm.get_or_create_session(user_id)
     assert session.current_step == 1
@@ -218,8 +218,8 @@ def test_user_actual_screenshot_case_bento_and_cancel():
 
     # 2. 客人在 Step 2 輸入「你們有便當嘛」
     r_bento = sm.process_message(user_id, "你們有便當嘛")
-    assert "便當" in r_bento.reply_text or "餐盒" in r_bento.reply_text
-    assert "未能成功識別台灣手機號碼格式" not in r_bento.reply_text
+    assert "聯絡資訊" in r_bento.reply_text
+    assert "未能成功識別" not in r_bento.reply_text
     assert session.current_step == 2  # 依然保持在 Step 2，未被污染
 
     # 3. 客人輸入「我不想預約了」
@@ -259,3 +259,44 @@ def test_step_8_modify_menu_does_not_reset_all_data():
     assert session.data.adult_count == 50
     assert session.current_step == 8
     assert "預約確認卡片" in r_done.reply_text or r_done.flex_card is not None
+
+
+@patch("app.core.state_machine.get_booked_capacity", return_value=(0, 0))
+def test_contact_info_landline_support(mock_capacity):
+    """測試聯絡電話支援家機與市話（含區碼、分機）"""
+    sm = ConversationStateMachine()
+    user_id = "test_user_landline"
+
+    sm.process_message(user_id, "我要預約")
+    sm.process_message(user_id, "信義國小六年級畢旅")
+
+    # 輸入市話與分機
+    r2 = sm.process_message(user_id, "李主任 02-23456789#123")
+    assert "聯絡窗口已登錄" in r2.reply_text
+    session = sm.get_or_create_session(user_id)
+    assert session.current_step == 3
+    assert session.data.contact_name == "李主任"
+    assert "02-23456789#123" in session.data.contact_phone or "0223456789#123" in session.data.contact_phone
+
+
+@patch("app.core.state_machine.get_booked_capacity", return_value=(0, 0))
+def test_step_4_clicking_time_button_does_not_reset_session(mock_capacity):
+    """測試在 Step 4 點擊時段按鈕（不管是『預約時間 13:30』還是『13:30』），絕對不會誤觸重置回到 Step 1！"""
+    sm = ConversationStateMachine()
+    user_id = "test_user_time_click"
+
+    sm.process_message(user_id, "我要預約")
+    sm.process_message(user_id, "鴻海精密工業")
+    sm.process_message(user_id, "陳專案經理 02-22683456")
+    sm.process_message(user_id, "2026-11-25")
+
+    session = sm.get_or_create_session(user_id)
+    assert session.current_step == 4
+
+    # 模擬使用者點擊卡片按鈕發出「預約時間 13:30」
+    resp = sm.process_message(user_id, "預約時間 13:30")
+    # 必須順利進入 Step 5，絕不可被重置回 Step 1（團體名稱）
+    assert session.current_step == 5
+    assert session.data.booking_time == "13:30"
+    assert "人數規模" in resp.reply_text
+

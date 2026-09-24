@@ -137,25 +137,62 @@ def clean_group_name(text: str) -> str:
 
 
 def parse_contact_info(text: str) -> Tuple[Optional[str], Optional[str]]:
-    """自文字中解析聯絡人姓名與台灣手機電話 (寬容支援無符號或各種分隔)"""
-    phone_pattern = r"(09\d{2}[-\s]?\d{3}[-\s]?\d{3}|09\d{8})"
-    phone_match = re.search(phone_pattern, text)
-    if not phone_match:
-        # 若未找到完整 10 碼，嘗試提取任何連續 9~10 碼
-        alt_match = re.search(r"\b(09\d{7,8})\b", text.replace("-", "").replace(" ", ""))
+    """
+    自文字中解析聯絡人姓名與聯絡電話：
+    寬容支援「台灣手機 (09XX)」與「全台各縣市家機/市內電話/公司電話 (02~08)」，並支援分機 (#123, ext 123, 分機123)。
+    """
+    raw = text.strip()
+
+    # 1. 抽取分機號碼 (如 #123, ext 123, 分機123, 轉123)
+    ext_part = ""
+    ext_match = re.search(r"(?:[#＃]|(?:ext\.?|分機|轉)\s*)(\d{1,6})", raw, re.IGNORECASE)
+    if ext_match:
+        ext_part = f"#{ext_match.group(1)}"
+        raw_without_ext = raw[:ext_match.start()] + " " + raw[ext_match.end():]
+    else:
+        raw_without_ext = raw
+
+    # 2. 匹配電話號碼
+    # A. 台灣手機 (09 開頭 10 碼)
+    mobile_pattern = r"(09\d{2}[-\s]?\d{3}[-\s]?\d{3}|09\d{8})"
+    # B. 台灣市話 / 家機 (0 開頭區碼 + 本地號碼，如 02, 03, 04, 05, 06, 07, 08, 037, 049, 082 等)
+    tel_pattern = r"(\(?0[2-8]\d{0,2}\)?[-—\s]?\d{3,4}[-—\s]?\d{3,4}|\b0[2-8]\d{7,8}\b)"
+
+    matched_phone = None
+    name_candidate = raw_without_ext
+
+    m_mobile = re.search(mobile_pattern, raw_without_ext)
+    if m_mobile:
+        matched_phone = m_mobile.group(1)
+        name_candidate = raw_without_ext.replace(m_mobile.group(0), " ").strip()
+    else:
+        m_tel = re.search(tel_pattern, raw_without_ext)
+        if m_tel:
+            digits = re.sub(r"\D", "", m_tel.group(1))
+            if 8 <= len(digits) <= 11 and digits.startswith("0"):
+                matched_phone = m_tel.group(1)
+                name_candidate = raw_without_ext.replace(m_tel.group(0), " ").strip()
+
+    if not matched_phone:
+        # 備援寬容比對：嘗試尋找連續 8~10 位以 0 開頭之號碼
+        alt_match = re.search(r"\b(0\d{7,9})\b", re.sub(r"[-\s()]", "", raw_without_ext))
         if not alt_match:
             return None, None
-        phone = alt_match.group(1)
-        name_candidate = text.replace(phone, "").strip()
-    else:
-        phone = phone_match.group(1).replace("-", "").replace(" ", "")
-        name_candidate = text.replace(phone_match.group(0), "").strip()
+        digits_phone = alt_match.group(1)
+        matched_phone = digits_phone
+        name_candidate = raw_without_ext.replace(digits_phone, " ").strip()
 
-    name = re.sub(r"[^\w\u4e00-\u9fa5a-zA-Z]", "", name_candidate)
-    if not name or len(name) < 1:
-        name = "貴賓聯絡人"
+    # 格式化輸出電話字串 (保留分機)
+    final_phone = f"{matched_phone.strip()}{ext_part}"
 
-    return name, phone
+    # 清理姓名中的多餘標籤字眼
+    name_clean = re.sub(r"(?i)(聯絡人|窗口|聯絡電話|電話|手機|市話|家機)[:：]?", "", name_candidate)
+    name_clean = re.sub(r"[^\w\u4e00-\u9fa5a-zA-Z]", "", name_clean).strip()
+    if not name_clean or len(name_clean) < 1:
+        name_clean = "貴賓聯絡人"
+
+    return name_clean, final_phone
+
 
 
 # 快捷日期按鈕
@@ -358,11 +395,11 @@ class ConversationStateMachine:
             session = self.get_or_create_session(user_id)
             return self._step_0_start(session, timeout_prefix)
 
-        # 預約啟動詞 (支援「想預約」、「我想預約」、「預約」等，嚴格排除否定詞如「不想預約」、「不要預約」)
+        # 預約啟動詞 (僅在 Step 0 尚未進入流程時生效；若已在預約流程中，嚴禁誤重置)
         booking_triggers = ["預約", "想預約", "我要預約", "開始預約", "團體預約", "我想預約", "預約團體", "我要報名"]
         is_negation = any(neg in msg for neg in ["不", "沒", "別", "取消", "放棄", "算"])
         is_asking_how_to = any(k in msg for k in ["如何預約", "怎麼預約", "預約流程", "預約規定", "預約電話"])
-        if any(trigger in msg for trigger in booking_triggers) and not is_negation and not is_asking_how_to:
+        if session.current_step == 0 and any(trigger in msg for trigger in booking_triggers) and not is_negation and not is_asking_how_to:
             self.reset_session(user_id)
             session = self.get_or_create_session(user_id)
             return self._step_0_start(session, timeout_prefix)
@@ -477,8 +514,8 @@ class ConversationStateMachine:
         return BotResponse(
             reply_text=(
                 f"{prefix}已收到團體名稱：【{clean_name}】。\n\n"
-                f"請提供主要【聯絡人姓名】與【手機號碼】\n"
-                f"（例如：王小明 0912-345678）："
+                f"請提供主要【聯絡人姓名】與【聯絡電話（手機或市話/家機皆可）】\n"
+                f"（例如：王小明 0912-345678 或 李主任 02-23456789#123）："
             ),
             quick_replies=["取消預約"]
         )
@@ -492,7 +529,7 @@ class ConversationStateMachine:
                     f"{prefix}🤖 關於您的詢問，為您說明如下：\n\n{faq_reply}\n\n"
                     f"───────────────\n"
                     f"📌 【目前預約進度：第 2 步 聯絡資訊】\n"
-                    f"若要繼續預約，請提供【聯絡人姓名】與【手機號碼】（例如：王小明 0912-345678）；\n"
+                    f"若要繼續預約，請提供【聯絡人姓名】與【聯絡電話（手機或家機）】（例如：王小明 0912-345678 或 02-23456789）；\n"
                     f"若暫不預約，可點選下方【❌ 取消預約】。"
                 ),
                 quick_replies=["取消預約"]
@@ -502,8 +539,8 @@ class ConversationStateMachine:
         if not phone:
             return BotResponse(
                 reply_text=(
-                    f"{prefix}未能成功識別台灣手機號碼格式，請重新輸入聯絡人與手機\n"
-                    f"（格式範例：王小明 0912-345678 或 0912345678）："
+                    f"{prefix}未能成功識別電話號碼格式，請重新輸入聯絡人與聯絡電話（手機或市話/家機皆可）\n"
+                    f"（格式範例：王小明 0912-345678 或 李主任 02-23456789#123）："
                 ),
                 quick_replies=["取消預約"]
             )
@@ -895,10 +932,10 @@ class ConversationStateMachine:
             if phone:
                 session.data.contact_name = name
                 session.data.contact_phone = phone
-                return self._render_confirm_card_response(session, prefix="✅ 聯絡人與手機已成功更新！")
+                return self._render_confirm_card_response(session, prefix="✅ 聯絡人與電話已成功更新！")
             else:
-                session.editing_step = 2  # 重新等待正確手機號碼
-                return BotResponse(reply_text="⚠️ 手機號碼格式未能識別，請重新輸入聯絡人姓名與手機號碼（例如：王小明 0912-345678）：")
+                session.editing_step = 2  # 重新等待正確電話號碼
+                return BotResponse(reply_text="⚠️ 電話號碼格式未能識別，請重新輸入聯絡人姓名與聯絡電話（手機或市話/家機皆可，例如：王小明 0912-345678 或 02-23456789）：")
 
         elif step == 3:
             parsed_date = parse_relaxed_date(msg)
