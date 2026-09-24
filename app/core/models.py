@@ -38,6 +38,8 @@ class BookingData(BaseModel):
     invoice_status: str = "未開立"
     case_status: str = "進行中"
     sales_note: str = ""
+    allow_duplicate: bool = False  # 是否已通過重複預約確認旗標
+
 
 
 class UserSession(BaseModel):

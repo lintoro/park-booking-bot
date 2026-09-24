@@ -272,3 +272,140 @@ def render_invoice_card() -> Dict[str, Any]:
     raw_json = _load_template_raw("invoice_card.json")
     return json.loads(raw_json)
 
+
+def render_reservation_detail_card(record: Dict[str, Any]) -> Dict[str, Any]:
+    """渲染單筆預約訂單詳細資訊卡片 (支援線上取消預約按鈕)"""
+    res_id = str(record.get("預約編號", "未知"))
+    group_name = str(record.get("團體名稱", "未指定"))
+    contact_name = str(record.get("聯絡窗口", ""))
+    contact_phone = str(record.get("聯絡手機", ""))
+    booking_date = str(record.get("入園日期", ""))
+    booking_time = str(record.get("入場梯次", ""))
+    session_type = str(record.get("場次類型", ""))
+    total_admission = str(record.get("入場總人數", 0))
+    free_crew = str(record.get("隨隊免票數", 0))
+    total_amount = str(record.get("門票總額", 0))
+    deposit_amount = str(record.get("10%訂金金額", 0))
+    deposit_status = str(record.get("訂金狀態", "待收訂金"))
+    show_status = str(record.get("到場狀態", "待履約"))
+    case_status = str(record.get("案件狀態", "進行中"))
+
+    is_cancelled = "取消" in show_status or "取消" in case_status
+
+    status_color = "#9E9E9E" if is_cancelled else ("#2E7D32" if "已" in deposit_status else "#FB8C00")
+    status_text = "已取消" if is_cancelled else f"{deposit_status} / {show_status}"
+
+    footer_contents = []
+    if not is_cancelled:
+        footer_contents.append({
+            "type": "button",
+            "style": "secondary",
+            "color": "#D32F2F",
+            "height": "sm",
+            "action": {
+                "type": "postback",
+                "label": "❌ 取消此筆預約",
+                "data": f"action=cancel_confirmed_booking&res_id={res_id}",
+                "displayText": f"我要取消預約 {res_id}"
+            }
+        })
+    else:
+        footer_contents.append({
+            "type": "text",
+            "text": "此筆預約已被取消，若需入園請重新預約",
+            "color": "#888888",
+            "size": "xs",
+            "align": "center"
+        })
+
+    bubble = {
+        "type": "bubble",
+        "size": "mega",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": "#37474F",
+            "paddingAll": "18px",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "🎫 預約訂單查詢結果",
+                    "weight": "bold",
+                    "color": "#FFFFFF",
+                    "size": "lg"
+                },
+                {
+                    "type": "text",
+                    "text": f"單號：{res_id}",
+                    "color": "#B0BEC5",
+                    "size": "xs",
+                    "margin": "xs"
+                }
+            ]
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "paddingAll": "20px",
+            "contents": [
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "text", "text": "預約狀態", "color": "#888888", "size": "sm", "flex": 2},
+                        {"type": "text", "text": status_text, "color": status_color, "size": "sm", "weight": "bold", "flex": 4}
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "text", "text": "團體名稱", "color": "#888888", "size": "sm", "flex": 2},
+                        {"type": "text", "text": group_name, "color": "#212121", "size": "sm", "weight": "bold", "flex": 4, "wrap": True}
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "text", "text": "入園梯次", "color": "#888888", "size": "sm", "flex": 2},
+                        {"type": "text", "text": f"{booking_date} {booking_time} ({session_type})", "color": "#00897B", "size": "sm", "weight": "bold", "flex": 4, "wrap": True}
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "text", "text": "入場人數", "color": "#888888", "size": "sm", "flex": 2},
+                        {"type": "text", "text": f"{total_admission} 位 (含隨隊 {free_crew} 位)", "color": "#212121", "size": "sm", "flex": 4}
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "text", "text": "門票總額", "color": "#888888", "size": "sm", "flex": 2},
+                        {"type": "text", "text": f"NT$ {int(float(total_amount or 0)):,} 元", "color": "#E65100", "size": "sm", "weight": "bold", "flex": 4}
+                    ]
+                },
+                {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "contents": [
+                        {"type": "text", "text": "聯絡窗口", "color": "#888888", "size": "sm", "flex": 2},
+                        {"type": "text", "text": f"{contact_name} ({contact_phone})", "color": "#555555", "size": "xs", "flex": 4}
+                    ]
+                }
+            ]
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "contents": footer_contents
+        }
+    }
+    return bubble
+
+

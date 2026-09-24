@@ -5,11 +5,14 @@ from datetime import datetime, timedelta, date
 from unittest.mock import patch
 from app.core.state_machine import ConversationStateMachine, state_machine
 from app.core.capacity_gate import TAIPEI_TZ
+from app.services.sheets_service import clear_mock_database
 
 
+@patch("app.services.sheets_service.get_spreadsheet", return_value=None)
 @patch("app.core.state_machine.get_booked_capacity", return_value=(0, 0))
-def test_full_booking_flow_step_0_to_9(mock_capacity):
+def test_full_booking_flow_step_0_to_9(mock_capacity, mock_sheet):
     """測試從 Step 0 啟動至 Step 9 正式送出預約的完整流程（包含獨立日期與時間）"""
+    clear_mock_database()
     sm = ConversationStateMachine()
     user_id = "test_user_flow_01"
 
@@ -279,9 +282,11 @@ def test_contact_info_landline_support(mock_capacity):
     assert "02-23456789#123" in session.data.contact_phone or "0223456789#123" in session.data.contact_phone
 
 
+@patch("app.services.sheets_service.get_spreadsheet", return_value=None)
 @patch("app.core.state_machine.get_booked_capacity", return_value=(0, 0))
-def test_step_4_clicking_time_button_does_not_reset_session(mock_capacity):
+def test_step_4_clicking_time_button_does_not_reset_session(mock_capacity, mock_sheet):
     """測試在 Step 4 點擊時段按鈕（不管是『預約時間 13:30』還是『13:30』），絕對不會誤觸重置回到 Step 1！"""
+    clear_mock_database()
     sm = ConversationStateMachine()
     user_id = "test_user_time_click"
 
@@ -299,4 +304,91 @@ def test_step_4_clicking_time_button_does_not_reset_session(mock_capacity):
     assert session.current_step == 5
     assert session.data.booking_time == "13:30"
     assert "人數規模" in resp.reply_text
+
+
+@patch("app.services.sheets_service.get_spreadsheet", return_value=None)
+@patch("app.core.state_machine.get_booked_capacity", return_value=(0, 0))
+def test_query_reservation_and_cancel_confirmed_booking(mock_capacity, mock_sheet):
+    """測試查詢預約紀錄與線上取消已成立預約功能"""
+    clear_mock_database()
+    sm = ConversationStateMachine()
+    user_id = "test_user_query_cancel"
+
+    # 1. 建立一筆預約並正式送出
+    sm.process_message(user_id, "我要預約")
+    sm.process_message(user_id, "台積電研發六部")
+    sm.process_message(user_id, "張組長 0933-111222")
+    sm.process_message(user_id, "2026-11-28")
+    sm.process_message(user_id, "10:30")
+    sm.process_message(user_id, "全票30 半票10")
+    sm.process_message(user_id, "1台")
+    sm.process_message(user_id, "免開統編")
+    confirm_resp = sm.process_message(user_id, "", postback_data="action=confirm_booking")
+    assert "預約申請已成功送出" in confirm_resp.reply_text
+
+    # 2. 測試文字查詢預約（包含「查詢預約」與「所以這樣就預約成功了嘛」）
+    query_resp1 = sm.process_message(user_id, "查詢預約")
+    assert query_resp1.flex_card is not None
+    assert "台積電研發六部" in str(query_resp1.flex_card)
+    assert "action=cancel_confirmed_booking" in str(query_resp1.flex_card)
+
+    query_resp2 = sm.process_message(user_id, "所以這樣就預約成功了嘛")
+    assert query_resp2.flex_card is not None
+    assert "台積電研發六部" in str(query_resp2.flex_card)
+
+    # 3. 測試點選取消此筆預約
+    session = sm.get_or_create_session(user_id)
+    res_id = session.data.reservation_id
+    cancel_resp = sm.process_message(user_id, "", postback_data=f"action=cancel_confirmed_booking&res_id={res_id}")
+    assert "預約取消成功" in cancel_resp.reply_text
+    assert res_id in cancel_resp.reply_text
+
+    # 4. 再次查詢，應顯示此單為已取消
+    query_resp3 = sm.process_message(user_id, "查我的預約")
+    assert "已取消" in query_resp3.reply_text
+    assert "此筆預約已取消" in query_resp3.reply_text
+    assert "GRP-" in str(query_resp3.flex_card)
+
+
+@patch("app.services.sheets_service.get_spreadsheet", return_value=None)
+@patch("app.core.state_machine.get_booked_capacity", return_value=(0, 0))
+def test_duplicate_booking_collision_prevention_and_add_second_group(mock_capacity, mock_sheet):
+    """測試同日相似團體或同電話預約防呆提醒，並支援『確認追加第二團』流轉"""
+    clear_mock_database()
+    sm = ConversationStateMachine()
+    user_a = "user_department_a"
+    user_b = "user_department_b"
+
+    # 1. 窗口 A 先為「聯發科技軟體處」完成 2026-12-05 的預約
+    sm.process_message(user_a, "我要預約")
+    sm.process_message(user_a, "聯發科技軟體研發處")
+    sm.process_message(user_a, "林工程師 0928-888777")
+    sm.process_message(user_a, "2026-12-05")
+    sm.process_message(user_a, "10:00")
+    sm.process_message(user_a, "40人")
+    sm.process_message(user_a, "無")
+    sm.process_message(user_a, "免")
+    sm.process_message(user_a, "", postback_data="action=confirm_booking")
+
+    # 2. 窗口 B（同公司硬體處）在同一天預約「聯發科技硬體設計處」，到達 Step 4 選擇時段
+    sm.process_message(user_b, "我要預約")
+    sm.process_message(user_b, "聯發科技硬體設計處")
+    sm.process_message(user_b, "黃副理 02-27891234")
+    sm.process_message(user_b, "2026-12-05")
+
+    # 在 Step 4 輸入時段，應觸發同日相似團體防呆
+    time_resp = sm.process_message(user_b, "10:30")
+    assert "系統偵測到同日重複預約防呆提醒" in time_resp.reply_text
+    assert "聯發科技" in time_resp.reply_text
+    assert "追加第二團" in time_resp.reply_text
+    session_b = sm.get_or_create_session(user_b)
+    assert session_b.current_step == 4  # 仍在 Step 4 等待確認追加或查詢
+
+    # 3. 窗口 B 確認「👉 確認追加第二團」
+    override_resp = sm.process_message(user_b, "👉 確認追加第二團")
+    assert "已確認為同單位【追加第二團】" in override_resp.reply_text
+    assert session_b.current_step == 5  # 順利晉級 Step 5 人數規模
+    assert session_b.data.allow_duplicate is True
+    assert session_b.data.booking_time == "10:30"
+
 

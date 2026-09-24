@@ -12,6 +12,7 @@ Google Sheets 雲端試算表資料庫串接模組 (sheets_service.py)
 - 支援本機開發與測試的 Mock / 記憶體備援機制，無憑證時不崩潰並記錄日誌。
 """
 import os
+import re
 import json
 import logging
 from datetime import datetime, date
@@ -408,9 +409,9 @@ def _update_dashboard_sheet(
                 break
 
         if session_type == "上午場":
-            current_morning += new_admission_people
+            current_morning = max(0, current_morning + new_admission_people)
         else:
-            current_afternoon += new_admission_people
+            current_afternoon = max(0, current_afternoon + new_admission_people)
 
         total_daily = current_morning + current_afternoon
 
@@ -432,9 +433,225 @@ def _update_dashboard_sheet(
         else:
             ws_dash.append_row(dash_row)
 
-
     except Exception as e:
         logger.error(f"更新檔期總量控管儀表板失敗：{e}")
+
+
+def get_reservations_by_user_id(user_id: str) -> List[Dict[str, Any]]:
+    """根據 LINE_User_ID 查詢使用者的歷史或進行中預約清單（最新的排前面）"""
+    if not user_id:
+        return []
+
+    # 1. 優先查線上試算表
+    spreadsheet = get_spreadsheet()
+    if spreadsheet:
+        try:
+            ws_log = spreadsheet.worksheet(SHEET_LOG_NAME)
+            records = ws_log.get_all_records()
+            user_records = []
+            for rec in records:
+                if str(rec.get("LINE_User_ID", "")).strip() == user_id.strip():
+                    user_records.append(rec)
+            user_records.reverse()
+            return user_records
+        except Exception as e:
+            logger.error(f"線上查詢使用者預約記錄失敗：{e}")
+
+    # 2. 查本地記憶體模擬庫
+    user_records = [
+        r for r in _MOCK_LOG_DB
+        if str(r.get("LINE_User_ID", "")).strip() == user_id.strip()
+    ]
+    user_records.reverse()
+    return user_records
+
+
+def get_reservation_by_id(reservation_id: str) -> Optional[Dict[str, Any]]:
+    """根據預約流水編號查詢預約詳細資料"""
+    if not reservation_id:
+        return None
+
+    spreadsheet = get_spreadsheet()
+    if spreadsheet:
+        try:
+            ws_log = spreadsheet.worksheet(SHEET_LOG_NAME)
+            records = ws_log.get_all_records()
+            for rec in records:
+                if str(rec.get("預約編號", "")).strip() == reservation_id.strip():
+                    return rec
+        except Exception as e:
+            logger.error(f"線上查詢單筆預約編號失敗：{e}")
+
+    for r in _MOCK_LOG_DB:
+        if str(r.get("預約編號", "")).strip() == reservation_id.strip():
+            return r
+
+    return None
+
+
+def cancel_existing_reservation(reservation_id: str, user_id: str = "") -> Tuple[bool, str]:
+    """
+    取消已確認之預約：
+    1. 狀態更新為「取消」
+    2. 自動扣減 Dashboard 檔期人數釋放名額
+    3. 業務備註記錄取消時間戳記
+    """
+    if not reservation_id:
+        return False, "無效的預約編號。"
+
+    now_str = get_current_taipei_time().strftime("%Y-%m-%d %H:%M:%S")
+
+    # 本地記憶體模擬取消處理
+    for r in _MOCK_LOG_DB:
+        if str(r.get("預約編號", "")).strip() == reservation_id.strip():
+            if user_id and str(r.get("LINE_User_ID", "")).strip() != user_id.strip():
+                return False, "您無權限取消此筆預約。"
+            if str(r.get("到場狀態", "")) == "取消":
+                return False, "此筆預約先前已取消，無須重複操作。"
+
+            r["到場狀態"] = "取消"
+            r["案件狀態"] = "已取消(客戶線上取消)"
+            r["業務跟進備註"] = (r.get("業務跟進備註", "") + f" [於 {now_str} 客戶自主取消]").strip()
+
+            date_str = str(r.get("入園日期", ""))
+            session_type = str(r.get("場次類型", "上午場"))
+            total_count = int(r.get("入場總人數", 0) or 0)
+            if date_str in _MOCK_CAPACITY_CACHE:
+                field = "morning" if session_type == "上午場" else "afternoon"
+                _MOCK_CAPACITY_CACHE[date_str][field] = max(0, _MOCK_CAPACITY_CACHE[date_str][field] - total_count)
+
+    spreadsheet = get_spreadsheet()
+    if not spreadsheet:
+        return True, "預約已成功取消，名額已釋出。"
+
+    try:
+        ws_log = spreadsheet.worksheet(SHEET_LOG_NAME)
+        records = ws_log.get_all_records()
+        row_idx = None
+        target_rec = None
+
+        for idx, rec in enumerate(records, start=2):
+            if str(rec.get("預約編號", "")).strip() == reservation_id.strip():
+                row_idx = idx
+                target_rec = rec
+                break
+
+        if not row_idx or not target_rec:
+            return False, f"查無預約編號 [{reservation_id}]。"
+
+        if user_id and str(target_rec.get("LINE_User_ID", "")).strip() != user_id.strip():
+            return False, "您無權限取消此筆預約。"
+
+        if str(target_rec.get("到場狀態", "")) == "取消":
+            return False, "此筆預約先前已取消，無須重複操作。"
+
+        # 更新該列：第 24 欄 (到場狀態)、第 29 欄 (案件狀態)、第 30 欄 (業務備註)
+        ws_log.update_cell(row_idx, 24, "取消")
+        ws_log.update_cell(row_idx, 29, "已取消(客戶線上取消)")
+        prev_note = str(target_rec.get("業務跟進備註", ""))
+        new_note = (prev_note + f" [於 {now_str} 客戶自主取消]").strip()
+        ws_log.update_cell(row_idx, 30, new_note)
+
+        # 釋放容量
+        date_str = str(target_rec.get("入園日期", ""))
+        session_type = str(target_rec.get("場次類型", "上午場"))
+        total_count = int(target_rec.get("入場總人數", 0) or 0)
+        _update_dashboard_sheet(spreadsheet, date_str, session_type, -total_count)
+
+        logger.info(f"成功取消預約 [{reservation_id}] 並扣減容量人數 {total_count} 位")
+        return True, "預約已成功取消，名額已為您即時釋出。"
+    except Exception as e:
+        logger.error(f"線上取消預約失敗：{e}")
+        return False, f"取消預約時發生系統異常：{e}"
+
+
+def _find_lcs_length(s1: str, s2: str) -> int:
+    """計算兩字串之最長公共子字串長度"""
+    if not s1 or not s2:
+        return 0
+    m = [[0] * (1 + len(s2)) for _ in range(1 + len(s1))]
+    longest = 0
+    for x in range(1, 1 + len(s1)):
+        for y in range(1, 1 + len(s2)):
+            if s1[x - 1] == s2[y - 1]:
+                m[x][y] = m[x - 1][y - 1] + 1
+                if m[x][y] > longest:
+                    longest = m[x][y]
+            else:
+                m[x][y] = 0
+    return longest
+
+
+def check_duplicate_booking(
+    booking_date: date,
+    group_name: str,
+    contact_phone: str = "",
+    current_res_id: str = ""
+) -> Optional[Dict[str, Any]]:
+    """
+    避免重複預約核對（Duplicate / Collision Prevention）：
+    若同一日期已有相近團體名稱或相同電話之有效預約，回傳該筆預約資訊以進行防呆提醒。
+    """
+    if not booking_date:
+        return None
+
+    date_str = str(booking_date)
+    clean_phone = re.sub(r"\D", "", contact_phone) if contact_phone else ""
+    # 提取核心團體名稱 (去除常見公司、學校、福委會、旅行社等詞)
+    clean_target_group = re.sub(r"(?i)(股份有限公司|有限公司|科技公司|企業社|企業|公司|國小|國中|高中|大學|幼兒園|幼兒學校|旅行社|福委會|福利會|職工會|協會|教會|健行團|同好會)", "", group_name).strip()
+
+    all_records = []
+    spreadsheet = get_spreadsheet()
+    if spreadsheet:
+        try:
+            ws_log = spreadsheet.worksheet(SHEET_LOG_NAME)
+            all_records = ws_log.get_all_records()
+        except Exception as e:
+            logger.error(f"查詢試算表重複預約失敗：{e}")
+            all_records = _MOCK_LOG_DB
+    else:
+        all_records = _MOCK_LOG_DB
+
+    for rec in all_records:
+        # 排除已取消的單
+        if str(rec.get("到場狀態", "")) == "取消" or "取消" in str(rec.get("案件狀態", "")):
+            continue
+
+        res_id = str(rec.get("預約編號", "")).strip()
+        if current_res_id and res_id == current_res_id:
+            continue
+
+        rec_date = str(rec.get("入園日期", "")).strip()
+        if rec_date != date_str:
+            continue
+
+        # 檢測 1: 電話相同 (同一個窗口又在同一天預約)
+        rec_phone = re.sub(r"\D", "", str(rec.get("聯絡手機", "")))
+        if clean_phone and len(clean_phone) >= 7 and rec_phone and clean_phone == rec_phone:
+            logger.info(f"偵測到同電話重複預約：{clean_phone} (既有單號: {res_id})")
+            return rec
+
+        # 檢測 2: 團體名稱相同或核心名稱高度重疊
+        rec_group = str(rec.get("團體名稱", "")).strip()
+        clean_rec_group = re.sub(r"(?i)(股份有限公司|有限公司|科技公司|企業社|企業|公司|國小|國中|高中|大學|幼兒園|幼兒學校|旅行社|福委會|福利會|職工會|協會|教會|健行團|同好會)", "", rec_group).strip()
+
+        if rec_group and group_name and (rec_group == group_name):
+            logger.info(f"偵測到同團名重複預約：{group_name} (既有單號: {res_id})")
+            return rec
+
+        if len(clean_target_group) >= 2 and len(clean_rec_group) >= 2:
+            if clean_target_group in clean_rec_group or clean_rec_group in clean_target_group:
+                logger.info(f"偵測到相似團名重複預約：{group_name} vs {rec_group} (既有單號: {res_id})")
+                return rec
+
+        # 檢測 3: 最長公共子字串 >= 4 (例如「聯發科技軟體處」與「聯發科技硬體處」，重疊「聯發科技」4字)
+        lcs_len = _find_lcs_length(group_name, rec_group)
+        if lcs_len >= 4:
+            logger.info(f"偵測到核心機構重疊重複預約(LCS={lcs_len})：{group_name} vs {rec_group} (既有單號: {res_id})")
+            return rec
+
+    return None
+
 
 
 def get_booked_capacity(booking_date: date) -> Tuple[int, int]:

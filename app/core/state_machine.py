@@ -52,10 +52,14 @@ from app.templates.template_renderer import (
     render_headcount_card,
     render_bus_card,
     render_invoice_card,
+    render_reservation_detail_card,
 )
 from app.services.sheets_service import (
     append_reservation_record,
     get_booked_capacity,
+    get_reservations_by_user_id,
+    cancel_existing_reservation,
+    check_duplicate_booking,
 )
 from app.services.faq_service import ask_park_faq
 from app.core.models import BookingData, UserSession, BotResponse
@@ -116,6 +120,20 @@ def is_likely_question_or_faq(text: str) -> bool:
         return True
 
     return False
+
+
+def is_query_reservation_intent(text: str) -> bool:
+    """判斷使用者是否表達查詢既有預約或訂單之意圖"""
+    t = text.strip()
+    if re.search(r"預約.*成功.*[嗎嘛]", t):
+        return True
+    query_keywords = [
+        "查詢預約", "查預約", "我的預約", "預約紀錄", "預約記錄", 
+        "查訂單", "我的訂單", "訂單查詢", "查詢既有預約",
+        "預約進度", "查看預約", "查我的預約", "是否有預約成功",
+        "有沒有預約成功", "確認預約成功"
+    ]
+    return any(k in t for k in query_keywords)
 
 
 def clean_group_name(text: str) -> str:
@@ -353,6 +371,11 @@ class ConversationStateMachine:
                 self.reset_session(user_id)
                 session = self.get_or_create_session(user_id)
                 return self._step_0_start(session, timeout_prefix)
+            elif "action=cancel_confirmed_booking" in postback_data:
+                import urllib.parse
+                params = urllib.parse.parse_qs(postback_data)
+                res_id = params.get("res_id", [""])[0]
+                return self._handle_cancel_confirmed_booking(user_id, res_id, timeout_prefix)
             elif "action=cancel_booking" in postback_data:
                 self.reset_session(user_id)
                 return BotResponse(
@@ -360,7 +383,11 @@ class ConversationStateMachine:
                     quick_replies=["我要預約", "園區設施有哪些？", "團體導覽幾點開始？"]
                 )
 
-        # 3.1 取消與中斷預約檢測 (在預約填寫中隨時可輸入「取消」中斷退出)
+        # 3.1 預約即時查詢 (使用者可隨時輸入「查詢預約」、「我的預約」、「預約成功了嗎」等)
+        if is_query_reservation_intent(msg):
+            return self._handle_query_reservation(user_id, timeout_prefix)
+
+        # 3.2 取消與中斷預約檢測 (在預約填寫中隨時可輸入「取消」中斷退出)
         if any(k in msg for k in CANCEL_KEYWORDS):
             if session.current_step > 0:
                 self.reset_session(user_id)
@@ -620,6 +647,22 @@ class ConversationStateMachine:
 
     def _step_4_handle_booking_time(self, session: UserSession, msg: str, prefix: str) -> BotResponse:
         """處理第 4 步：獨立入園時段與容量防呆"""
+        # 覆寫/確認追加第二團指令檢測
+        if any(k in msg for k in ["確認追加第二團", "確認追加", "追加第二團", "追加新團", "追加預約", "確認追加新團預約", "追加"]):
+            session.data.allow_duplicate = True
+            if session.data.booking_time:
+                session.current_step = 5
+                headcount_card = render_headcount_card()
+                return BotResponse(
+                    reply_text=(
+                        f"{prefix}✅ 已確認為同單位【追加第二團】！\n"
+                        f"已保留梯次：【{session.data.booking_date} {session.data.booking_time} ({session.data.session_type})】。\n\n"
+                        f"請選擇此梯次的【人數規模】（最低滿 20 人成團，可直接點選下方卡片快捷鍵）："
+                    ),
+                    flex_card=headcount_card,
+                    quick_replies=["全票30 半票10 幼童2", "40人", "全票25 半票5", "取消預約"]
+                )
+
         if is_likely_question_or_faq(msg):
             faq_reply = ask_park_faq(msg)
             return BotResponse(
@@ -670,9 +713,44 @@ class ConversationStateMachine:
                 quick_replies=qr_slots
             )
 
-        # 檢核通過
+        # 檢核通過：暫存時段與場次
         session.data.booking_time = parsed_time
         session.data.session_type = validation.session_type or "未定"
+
+        # 避免重複預約檢核 (Duplicate Collision Prevention)
+        if not session.data.allow_duplicate:
+            dup_rec = check_duplicate_booking(
+                booking_date=session.data.booking_date,
+                group_name=session.data.group_name or "",
+                contact_phone=session.data.contact_phone or ""
+            )
+            if dup_rec:
+                dup_res_id = dup_rec.get("預約編號", "")
+                dup_group = dup_rec.get("團體名稱", "")
+                dup_time = dup_rec.get("預約時間", "")
+                dup_session = dup_rec.get("場次類型", "")
+                dup_admission = dup_rec.get("入場總人數", "")
+                clean_phone = re.sub(r"\D", "", session.data.contact_phone or "")
+                rec_phone = re.sub(r"\D", "", str(dup_rec.get("聯絡手機", "")))
+
+                reason = "聯絡電話相同" if (clean_phone and clean_phone == rec_phone) else "團體名稱相近"
+                return BotResponse(
+                    reply_text=(
+                        f"{prefix}⚠️ 【系統偵測到同日重複預約防呆提醒】\n\n"
+                        f"系統比對發現【{session.data.booking_date}】已有一筆相似的預約紀錄（比對原因：{reason}）：\n"
+                        f"📋 既有預約單號：【{dup_res_id}】\n"
+                        f"🏢 既有團名：{dup_group}\n"
+                        f"⏰ 預約梯次：{dup_time} ({dup_session})\n"
+                        f"👥 登記人數：{dup_admission} 位\n\n"
+                        f"請問您是：\n"
+                        f"1. 為不同部門或梯次【追加第二團】？\n"
+                        f"2. 欲查詢已成立的預約紀錄？\n\n"
+                        f"💡 若確定要為同單位新增第二團，請點選下方【👉 確認追加第二團】即可繼續填寫！"
+                    ),
+                    quick_replies=["👉 確認追加第二團", "📋 查詢既有預約", "❌ 取消預約"]
+                )
+
+        # 檢核通過且無衝突
         session.current_step = 5
 
         headcount_card = render_headcount_card()
@@ -1054,6 +1132,67 @@ class ConversationStateMachine:
         )
 
         return BotResponse(reply_text=msg_body, is_session_finished=True, quick_replies=["我要預約", "園區設施有哪些？"])
+
+    def _handle_cancel_confirmed_booking(self, user_id: str, res_id: str, prefix: str) -> BotResponse:
+        """處理使用者點選查詢卡片上的「❌ 取消此筆預約」按鈕"""
+        if not res_id:
+            return BotResponse(reply_text=f"{prefix}⚠️ 無法取得預約單號，請點選「專人客服」為您處理。")
+
+        success, msg = cancel_existing_reservation(reservation_id=res_id, user_id=user_id)
+        if success:
+            return BotResponse(
+                reply_text=(
+                    f"{prefix}✅ 【預約取消成功】\n\n"
+                    f"預約單號：【{res_id}】已成功取消，系統已即時釋放該梯次入園名額。\n\n"
+                    f"若日後有需要，隨時歡迎輸入「預約」重新辦理，或直接諮詢園區資訊！"
+                ),
+                quick_replies=["👉 我要預約", "📋 查詢預約", "選單"]
+            )
+        else:
+            return BotResponse(
+                reply_text=f"{prefix}⚠️ 【取消失敗】\n{msg}\n若有任何疑問，請點選「專人客服」由工作人員為您處理。",
+                quick_replies=["📋 查詢預約", "📞 專人客服", "選單"]
+            )
+
+    def _handle_query_reservation(self, user_id: str, prefix: str) -> BotResponse:
+        """處理預約查詢請求，依 user_id 撈取並渲染 Flex Message 詳情卡片"""
+        records = get_reservations_by_user_id(user_id)
+        if not records:
+            return BotResponse(
+                reply_text=(
+                    f"{prefix}🔍 查無您近期的有效預約紀錄。\n\n"
+                    f"可能原因：\n"
+                    f"1. 尚未完成預約或預約已被取消\n"
+                    f"2. 先前透過其他 LINE 帳號或電話窗口預約\n\n"
+                    f"若您需要辦理新預約，請輸入「預約」；若需確認電話訂單，可點選「專人客服」！"
+                ),
+                quick_replies=["👉 我要預約", "📞 專人客服", "選單"]
+            )
+
+        if len(records) == 1:
+            rec = records[0]
+            card = render_reservation_detail_card(rec)
+            case_status = str(rec.get("案件狀態") or rec.get("case_status") or "已成立")
+            attendance_status = str(rec.get("到場狀態") or rec.get("attendance_status") or "")
+            is_cancelled = attendance_status == "取消" or "取消" in case_status
+            status = "已取消" if is_cancelled else case_status
+            notice = "此筆預約已取消，若需入園歡迎隨時重新預約。" if is_cancelled else "若需取消預約，可直接點選卡片下方「❌ 取消此筆預約」按鈕。"
+            return BotResponse(
+                reply_text=f"{prefix}📋 找到您的預約紀錄如下（狀態：{status}）：\n{notice}",
+                flex_card=card,
+                quick_replies=["👉 我要預約", "選單", "📞 專人客服"]
+            )
+        else:
+            bubbles = [render_reservation_detail_card(r) for r in records[:5]]
+            card = {
+                "type": "carousel",
+                "contents": bubbles
+            }
+            return BotResponse(
+                reply_text=f"{prefix}📋 找到您近期共 {len(records)} 筆預約紀錄（請左右滑動查看明細）：\n若需取消，可點選各卡片下方的取消按鈕。",
+                flex_card=card,
+                quick_replies=["👉 我要預約", "選單", "📞 專人客服"]
+            )
 
 
 # 全域狀態機單例
