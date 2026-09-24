@@ -321,9 +321,9 @@
         "height": "sm",
         "action": {
           "type": "postback",
-          "label": "✏️ 重新填寫 / 修改",
-          "data": "action=restart_booking&session_id={{session_id}}",
-          "displayText": "我想重新填寫預約資料"
+          "label": "✏️ 修改預約資料",
+          "data": "action=show_modify_menu&session_id={{session_id}}",
+          "displayText": "我想修改預約資料"
         }
       }
     ]
