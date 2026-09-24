@@ -169,6 +169,7 @@ DEFAULT_TIME_QUICK_REPLIES = [
 # Step 8 確認卡片的修改快捷按鈕
 CONFIRM_QUICK_REPLIES = [
     "✅ 確認送出預約",
+    "✏️ 修改預約資料",
     "🏢 改團體名稱",
     "👤 改聯絡電話",
     "📅 改入園日期",
@@ -176,7 +177,20 @@ CONFIRM_QUICK_REPLIES = [
     "👥 改人數明細",
     "🚌 改遊覽車數",
     "🧾 改統一編號",
-    "✏️ 重新填寫",
+    "🔄 全部重新填寫"
+]
+
+# Step 8 微調修改選單按鈕
+MODIFY_MENU_QUICK_REPLIES = [
+    "🏢 改團體名稱",
+    "👤 改聯絡電話",
+    "📅 改入園日期",
+    "⏰ 改到達時段",
+    "👥 改人數明細",
+    "🚌 改遊覽車數",
+    "🧾 改統一編號",
+    "🔙 返回確認卡片",
+    "🔄 全部重新填寫"
 ]
 
 
@@ -284,10 +298,20 @@ class ConversationStateMachine:
             else:
                 return BotResponse(reply_text=None)
 
-        # 3. Postback 動作處理 (核對確認或重新開始)
+        # 3. Postback 動作處理 (核對確認、微調修改或重新開始)
         if postback_data:
             if "action=confirm_booking" in postback_data:
                 return self._handle_confirm_booking(session, timeout_prefix)
+            elif "action=show_modify_menu" in postback_data or ("action=restart_booking" in postback_data and session.current_step == 8):
+                # 點選卡片上的「✏️ 修改預約資料」按鈕：展示部分微調選單
+                return BotResponse(
+                    reply_text=(
+                        f"{timeout_prefix}✏️ 【請選擇要修改的預約項目】\n\n"
+                        f"您無需全部重填！點選下方快捷鍵即可【單獨修改】該項目，其他已填資料都會為您保留：\n"
+                        f"（若確定想清空並從頭填寫，可點選「🔄 全部重新填寫」；或點選「🔙 返回確認卡片」）"
+                    ),
+                    quick_replies=MODIFY_MENU_QUICK_REPLIES
+                )
             elif "action=restart_booking" in postback_data or "action=resume_bot" in postback_data:
                 self.reset_session(user_id)
                 session = self.get_or_create_session(user_id)
@@ -313,8 +337,23 @@ class ConversationStateMachine:
                     quick_replies=["我要預約", "園區設施有哪些？"]
                 )
 
-        # 4. 關鍵字重啟檢測
-        if any(k in msg for k in ["重填", "重新填寫", "重新預約"]):
+        # 3.2 Step 8 返回確認卡片指令
+        if session.current_step == 8 and any(k in msg for k in ["返回確認卡片", "返回卡片", "看卡片", "查看卡片"]):
+            return self._render_confirm_card_response(session, prefix="📋 以下為您的預約確認卡片：")
+
+        # 3.3 Step 8 觸發修改微調選單
+        if session.current_step == 8 and any(k in msg for k in ["修改預約資料", "我想修改預約資料", "我想重新填寫預約資料", "修改預約", "改資料", "修改項目"]):
+            return BotResponse(
+                reply_text=(
+                    f"{timeout_prefix}✏️ 【請選擇要修改的預約項目】\n\n"
+                    f"您無需全部重填！點選下方快捷鍵即可【單獨修改】該項目，其他已填資料都會為您保留：\n"
+                    f"（若確定想清空並從頭填寫，可點選「🔄 全部重新填寫」；或點選「🔙 返回確認卡片」）"
+                ),
+                quick_replies=MODIFY_MENU_QUICK_REPLIES
+            )
+
+        # 4. 關鍵字重啟檢測 (僅在明確要求「全部重新填寫」時清空)
+        if any(k in msg for k in ["全部重新填寫", "全部重填", "清空重填", "重頭開始", "重新預約"]):
             self.reset_session(user_id)
             session = self.get_or_create_session(user_id)
             return self._step_0_start(session, timeout_prefix)
@@ -943,11 +982,20 @@ class ConversationStateMachine:
         date_str = session.data.booking_date.strftime("%Y%m%d") if session.data.booking_date else "20260101"
         res_id = f"GRP-{date_str}-{uuid.uuid4().hex[:4].upper()}"
         session.data.reservation_id = res_id
+        session.data.user_id = session.user_id
         session.current_step = 9
 
-        # 同步寫入後台試算表資料庫並動態更新檔期容量儀表板
+        # 嘗試取得 LINE 暱稱（若有串接 LINE API）
+        display_name = ""
         try:
-            append_reservation_record(session.data)
+            from app.services.line_service import get_user_profile_name
+            display_name = get_user_profile_name(session.user_id)
+        except Exception:
+            pass
+
+        # 同步寫入後台試算表資料庫並動態更新檔期容量儀表板與 CRM 顧客歸屬表
+        try:
+            append_reservation_record(session.data, line_display_name=display_name)
         except Exception as e:
             logger.error(f"寫入預約試算表記錄異常：{e}")
 

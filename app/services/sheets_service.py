@@ -12,6 +12,7 @@ Google Sheets 雲端試算表資料庫串接模組 (sheets_service.py)
 - 支援本機開發與測試的 Mock / 記憶體備援機制，無憑證時不崩潰並記錄日誌。
 """
 import os
+import json
 import logging
 from datetime import datetime, date
 from typing import Optional, Tuple, Dict, Any, List
@@ -23,6 +24,7 @@ from google.oauth2.service_account import Credentials
 from app.config import (
     GOOGLE_SPREADSHEET_ID,
     GOOGLE_CREDENTIALS_FILE,
+    GOOGLE_CREDENTIALS_JSON,
     MORNING_CAPACITY_LIMIT,
     AFTERNOON_CAPACITY_LIMIT,
     DAILY_CAPACITY_LIMIT,
@@ -42,13 +44,16 @@ SCOPES = [
 # 工作表名稱常數
 SHEET_LOG_NAME = "預約記錄表_Log"
 SHEET_DASHBOARD_NAME = "檔期總量控管_Dashboard"
+SHEET_CRM_NAME = "顧客檔案與業務歸屬_CRM"
 
-# 預約記錄表標準表頭 (21 欄)
+# 預約記錄表標準表頭 (30 欄) - 涵蓋進件到結案全生命週期與 GRM 追蹤
 LOG_HEADERS = [
-    "預約編號", "建立時間", "入園日期", "入場梯次", "場次類型",
-    "團體名稱", "聯絡窗口", "聯絡手機", "全票數", "半票數",
-    "幼童免票數", "遊覽車台數", "隨隊免票數", "團員人數", "入場總人數",
-    "門票總額", "10%訂金金額", "統一編號", "發票抬頭", "訂金狀態", "業務備註"
+    "預約編號", "建立時間", "LINE_User_ID", "負責業務員", "入園日期",
+    "入場梯次", "場次類型", "團體名稱", "聯絡窗口", "聯絡手機",
+    "全票數", "半票數", "幼童免票數", "遊覽車台數", "隨隊免票數",
+    "團員人數", "入場總人數", "門票總額", "10%訂金金額", "統一編號",
+    "發票抬頭", "訂金狀態", "訂金入帳日與末五碼", "到場狀態", "實到總人數",
+    "人數落差備註", "實收尾款", "發票開立狀態", "案件狀態", "業務跟進備註"
 ]
 
 # 檔期總量控管標準表頭 (5 欄)
@@ -60,28 +65,48 @@ DASHBOARD_HEADERS = [
     "狀態警示"
 ]
 
+# 顧客檔案與業務歸屬標準表頭 (15 欄) - 專門供業務管理與日後顧客關係資料分析
+CRM_HEADERS = [
+    "LINE_User_ID", "LINE暱稱", "客戶團體名稱", "主要聯絡人", "聯絡手機",
+    "負責業務員", "顧客評級", "首次預約日期", "最近互動日期", "累計預約次數",
+    "累計成單次數", "累計到場次數", "爽約次數", "累計消費總額", "業務標籤與備註"
+]
+
 # --- 本地記憶體模擬資料庫 (供測試與無憑證時備援) ---
 _MOCK_LOG_DB: List[Dict[str, Any]] = []
 _MOCK_CAPACITY_CACHE: Dict[str, Dict[str, int]] = {}
+_MOCK_CRM_DB: Dict[str, Dict[str, Any]] = {}
 
 
 def get_gspread_client() -> Optional[gspread.Client]:
-    """取得授權之 gspread 客戶端"""
-    cred_path = Path(GOOGLE_CREDENTIALS_FILE)
-    if not cred_path.exists():
-        logger.warning(f"Google 憑證檔案不存在：{GOOGLE_CREDENTIALS_FILE}，切換為本地模擬儲存模式。")
-        return None
+    """取得授權之 gspread 客戶端 (支援 GOOGLE_CREDENTIALS_JSON 環境變數或本地憑證檔案)"""
+    # 1. 優先支援 Render / 雲端環境變數直接注入 JSON 內容
+    if GOOGLE_CREDENTIALS_JSON and GOOGLE_CREDENTIALS_JSON.strip():
+        try:
+            cred_dict = json.loads(GOOGLE_CREDENTIALS_JSON)
+            credentials = Credentials.from_service_account_info(
+                cred_dict,
+                scopes=SCOPES
+            )
+            return gspread.authorize(credentials)
+        except Exception as e:
+            logger.error(f"解析環境變數 GOOGLE_CREDENTIALS_JSON 失敗：{e}")
 
-    try:
-        credentials = Credentials.from_service_account_file(
-            str(cred_path),
-            scopes=SCOPES
-        )
-        client = gspread.authorize(credentials)
-        return client
-    except Exception as e:
-        logger.error(f"Google 服務帳戶認證失敗：{e}")
-        return None
+    # 2. 次要支援本地憑證檔案路徑
+    cred_path = Path(GOOGLE_CREDENTIALS_FILE)
+    if cred_path.exists():
+        try:
+            credentials = Credentials.from_service_account_file(
+                str(cred_path),
+                scopes=SCOPES
+            )
+            return gspread.authorize(credentials)
+        except Exception as e:
+            logger.error(f"Google 服務帳戶認證失敗：{e}")
+            return None
+
+    logger.warning("未配置有效之 Google 服務帳戶憑證 (無 JSON 環境變數且無憑證檔案)，切換為本地模擬儲存模式。")
+    return None
 
 
 def get_spreadsheet() -> Optional[gspread.Spreadsheet]:
@@ -98,7 +123,10 @@ def get_spreadsheet() -> Optional[gspread.Spreadsheet]:
 
 def initialize_sheets_structure(spreadsheet: Optional[gspread.Spreadsheet] = None) -> bool:
     """
-    初始化試算表結構：若工作表不存在則自動建立，並寫入標準表頭。
+    初始化試算表結構：
+    1. 建立或升級 預約記錄表_Log (30 欄)
+    2. 建立 檔期總量控管_Dashboard (5 欄)
+    3. 建立 顧客檔案與業務歸屬_CRM (15 欄)
     """
     if spreadsheet is None:
         spreadsheet = get_spreadsheet()
@@ -110,15 +138,20 @@ def initialize_sheets_structure(spreadsheet: Optional[gspread.Spreadsheet] = Non
     try:
         existing_sheet_titles = [s.title for s in spreadsheet.worksheets()]
 
-        # 1. 建立或檢查 預約記錄表_Log
+        # 1. 建立或升級 預約記錄表_Log
         if SHEET_LOG_NAME not in existing_sheet_titles:
-            ws_log = spreadsheet.add_worksheet(title=SHEET_LOG_NAME, rows=1000, cols=25)
+            ws_log = spreadsheet.add_worksheet(title=SHEET_LOG_NAME, rows=1000, cols=35)
             ws_log.append_row(LOG_HEADERS)
-            logger.info(f"已建立工作表：{SHEET_LOG_NAME}")
+            logger.info(f"已建立工作表：{SHEET_LOG_NAME} (30 欄)")
         else:
             ws_log = spreadsheet.worksheet(SHEET_LOG_NAME)
-            if not ws_log.row_values(1):
+            current_headers = ws_log.row_values(1)
+            if not current_headers:
                 ws_log.append_row(LOG_HEADERS)
+            elif len(current_headers) < len(LOG_HEADERS):
+                # 欄位擴充平滑升級：將首列更新為最新的 30 欄標頭
+                ws_log.update(values=[LOG_HEADERS], range_name=f"A1:AD1")
+                logger.info(f"已成功將 {SHEET_LOG_NAME} 表頭擴充升級為 {len(LOG_HEADERS)} 欄！")
 
         # 2. 建立或檢查 檔期總量控管_Dashboard
         if SHEET_DASHBOARD_NAME not in existing_sheet_titles:
@@ -130,6 +163,16 @@ def initialize_sheets_structure(spreadsheet: Optional[gspread.Spreadsheet] = Non
             if not ws_dash.row_values(1):
                 ws_dash.append_row(DASHBOARD_HEADERS)
 
+        # 3. 建立或檢查 顧客檔案與業務歸屬_CRM
+        if SHEET_CRM_NAME not in existing_sheet_titles:
+            ws_crm = spreadsheet.add_worksheet(title=SHEET_CRM_NAME, rows=1000, cols=20)
+            ws_crm.append_row(CRM_HEADERS)
+            logger.info(f"已建立工作表：{SHEET_CRM_NAME} (15 欄)")
+        else:
+            ws_crm = spreadsheet.worksheet(SHEET_CRM_NAME)
+            if not ws_crm.row_values(1):
+                ws_crm.append_row(CRM_HEADERS)
+
         return True
     except Exception as e:
         logger.error(f"初始化 Google 試算表工作表結構失敗：{e}")
@@ -137,39 +180,170 @@ def initialize_sheets_structure(spreadsheet: Optional[gspread.Spreadsheet] = Non
 
 
 def build_log_row(booking: BookingData) -> List[Any]:
-    """將 BookingData 模型轉換為 預約記錄表_Log 的資料列"""
+    """將 BookingData 模型轉換為 預約記錄表_Log 的資料列 (精確 30 欄)"""
     now_str = get_current_taipei_time().strftime("%Y-%m-%d %H:%M:%S")
     date_str = str(booking.booking_date) if booking.booking_date else ""
 
     return [
-        booking.reservation_id,
-        now_str,
-        date_str,
-        booking.booking_time,
-        booking.session_type,
-        booking.group_name,
-        booking.contact_name,
-        booking.contact_phone,
-        booking.adult_count,
-        booking.concession_count,
-        booking.child_count,
-        booking.tour_bus_count,
-        booking.free_crew_count,
-        booking.group_member_count,
-        booking.total_admission_count,
-        booking.total_amount,
-        booking.deposit_amount,
-        booking.invoice_tax_id,
-        booking.invoice_title,
-        "未付訂",      # 預設狀態為未付訂 (彈性意向登記)
-        ""            # 業務備註預設空白
+        booking.reservation_id,                     # 1. 預約編號
+        now_str,                                    # 2. 建立時間
+        booking.user_id,                            # 3. LINE_User_ID
+        booking.sales_rep or "業務專員",             # 4. 負責業務員
+        date_str,                                   # 5. 入園日期
+        booking.booking_time,                       # 6. 入場梯次
+        booking.session_type,                       # 7. 場次類型
+        booking.group_name,                         # 8. 團體名稱
+        booking.contact_name,                       # 9. 聯絡窗口
+        booking.contact_phone,                      # 10. 聯絡手機
+        booking.adult_count,                        # 11. 全票數
+        booking.concession_count,                   # 12. 半票數
+        booking.child_count,                        # 13. 幼童免票數
+        booking.tour_bus_count,                     # 14. 遊覽車台數
+        booking.free_crew_count,                    # 15. 隨隊免票數
+        booking.group_member_count,                 # 16. 團員人數
+        booking.total_admission_count,              # 17. 入場總人數
+        booking.total_amount,                       # 18. 門票總額
+        booking.deposit_amount,                     # 19. 10%訂金金額
+        booking.invoice_tax_id,                     # 20. 統一編號
+        booking.invoice_title,                      # 21. 發票抬頭
+        booking.deposit_status or "待收訂金",         # 22. 訂金狀態
+        "",                                         # 23. 訂金入帳日與末五碼 (業務後續確認填寫)
+        booking.show_status or "待履約",             # 24. 到場狀態
+        booking.actual_admission_count or 0,        # 25. 實到總人數
+        booking.headcount_diff_note or "",          # 26. 人數落差備註
+        booking.final_payment_amount or 0,          # 27. 實收尾款
+        booking.invoice_status or "未開立",          # 28. 發票開立狀態
+        booking.case_status or "進行中",             # 29. 案件狀態
+        booking.sales_note or ""                    # 30. 業務跟進備註
     ]
 
 
-def append_reservation_record(booking: BookingData) -> bool:
+def upsert_customer_crm_profile(booking: BookingData, line_display_name: str = "") -> bool:
     """
-    將預約資料寫入 `預約記錄表_Log`，並動態更新 `檔期總量控管_Dashboard`。
-    若無雲端金鑰，則同步寫入本機記憶體備援資料庫。
+    依據顧客 LINE_User_ID 新增或更新『顧客檔案與業務歸屬_CRM』表。
+    累計預約次數、累計消費總額、最近互動日期、業務歸屬。
+    """
+    user_id = booking.user_id or "anonymous_user"
+    today_str = get_current_taipei_time().strftime("%Y-%m-%d")
+
+    # 1. 本機記憶體模擬庫維護
+    if user_id not in _MOCK_CRM_DB:
+        _MOCK_CRM_DB[user_id] = {
+            "LINE_User_ID": user_id,
+            "LINE暱稱": line_display_name,
+            "客戶團體名稱": booking.group_name,
+            "主要聯絡人": booking.contact_name,
+            "聯絡手機": booking.contact_phone,
+            "負責業務員": booking.sales_rep or "業務專員",
+            "顧客評級": "一般客戶",
+            "首次預約日期": today_str,
+            "最近互動日期": today_str,
+            "累計預約次數": 1,
+            "累計成單次數": 0,
+            "累計到場次數": 0,
+            "爽約次數": 0,
+            "累計消費總額": booking.total_amount,
+            "業務標籤與備註": "新客入庫登記"
+        }
+    else:
+        profile = _MOCK_CRM_DB[user_id]
+        profile["最近互動日期"] = today_str
+        profile["累計預約次數"] += 1
+        profile["累計消費總額"] += booking.total_amount
+        if booking.group_name:
+            profile["客戶團體名稱"] = booking.group_name
+        if booking.contact_name:
+            profile["主要聯絡人"] = booking.contact_name
+        if booking.contact_phone:
+            profile["聯絡手機"] = booking.contact_phone
+        if line_display_name:
+            profile["LINE暱稱"] = line_display_name
+
+    # 2. 寫入線上 Google 試算表 (若有設定)
+    spreadsheet = get_spreadsheet()
+    if not spreadsheet:
+        return True
+
+    try:
+        ws_crm = spreadsheet.worksheet(SHEET_CRM_NAME)
+        records = ws_crm.get_all_records()
+        row_index = None
+        target_rec = None
+
+        for idx, rec in enumerate(records, start=2):
+            if str(rec.get("LINE_User_ID", "")).strip() == user_id.strip():
+                row_index = idx
+                target_rec = rec
+                break
+
+        if row_index is not None and target_rec:
+            # 更新既有客戶資料
+            prev_booking_count = int(target_rec.get("累計預約次數", 0) or 0)
+            prev_total_spend = int(target_rec.get("累計消費總額", 0) or 0)
+            first_date = str(target_rec.get("首次預約日期", "")) or today_str
+            sales_rep = str(target_rec.get("負責業務員", "")) or booking.sales_rep or "業務專員"
+            rating = str(target_rec.get("顧客評級", "一般客戶")) or "一般客戶"
+
+            new_booking_count = prev_booking_count + 1
+            new_total_spend = prev_total_spend + (booking.total_amount or 0)
+
+            # 動態客戶評級提升機制
+            if new_total_spend >= 100000 or new_booking_count >= 3:
+                rating = "VIP大客戶"
+            elif new_booking_count >= 2:
+                rating = "忠誠熟客"
+
+            updated_row = [
+                user_id,
+                line_display_name or str(target_rec.get("LINE暱稱", "")),
+                booking.group_name or str(target_rec.get("客戶團體名稱", "")),
+                booking.contact_name or str(target_rec.get("主要聯絡人", "")),
+                booking.contact_phone or str(target_rec.get("聯絡手機", "")),
+                sales_rep,
+                rating,
+                first_date,
+                today_str,
+                new_booking_count,
+                int(target_rec.get("累計成單次數", 0) or 0),
+                int(target_rec.get("累計到場次數", 0) or 0),
+                int(target_rec.get("爽約次數", 0) or 0),
+                new_total_spend,
+                str(target_rec.get("業務標籤與備註", ""))
+            ]
+            ws_crm.update(values=[updated_row], range_name=f"A{row_index}:O{row_index}")
+            logger.info(f"成功更新 CRM 顧客資料：user_id={user_id}, 累計預約={new_booking_count}, 評級={rating}")
+        else:
+            # 新客入庫建立
+            new_row = [
+                user_id,
+                line_display_name or "",
+                booking.group_name,
+                booking.contact_name,
+                booking.contact_phone,
+                booking.sales_rep or "業務專員",
+                "一般客戶",
+                today_str,
+                today_str,
+                1,
+                0,
+                0,
+                0,
+                booking.total_amount or 0,
+                "新客入庫登記"
+            ]
+            ws_crm.append_row(new_row)
+            logger.info(f"成功建立 CRM 新客建檔：user_id={user_id}, 團體={booking.group_name}")
+
+        return True
+    except Exception as e:
+        logger.error(f"更新 CRM 顧客資料庫失敗：{e}")
+        return False
+
+
+def append_reservation_record(booking: BookingData, line_display_name: str = "") -> bool:
+    """
+    將預約資料寫入 `預約記錄表_Log` (30 欄)，
+    並連動更新 `檔期總量控管_Dashboard` 與 `顧客檔案與業務歸屬_CRM` (15 欄)。
     """
     row_data = build_log_row(booking)
     date_key = str(booking.booking_date) if booking.booking_date else "unknown_date"
@@ -187,20 +361,28 @@ def append_reservation_record(booking: BookingData) -> bool:
     # 2. 寫入線上 Google 試算表 (若有設定)
     spreadsheet = get_spreadsheet()
     if not spreadsheet:
+        upsert_customer_crm_profile(booking, line_display_name=line_display_name)
         logger.info(f"[本地模擬寫入成功] 預約編號={booking.reservation_id}, 入園人數={booking.total_admission_count}")
         return True
 
     try:
+        # 確保工作表與表頭正確存在
+        initialize_sheets_structure(spreadsheet)
+
         ws_log = spreadsheet.worksheet(SHEET_LOG_NAME)
         ws_log.append_row(row_data)
         logger.info(f"成功將預約編號 [{booking.reservation_id}] 寫入線上試算表！")
 
         # 3. 連動更新儀表板容量
         _update_dashboard_sheet(spreadsheet, date_key, booking.session_type, booking.total_admission_count)
+
+        # 4. 連動更新顧客檔案與業務歸屬 CRM
+        upsert_customer_crm_profile(booking, line_display_name=line_display_name)
         return True
     except Exception as e:
         logger.error(f"寫入 Google 試算表失敗：{e}")
         return False
+
 
 
 def _update_dashboard_sheet(
@@ -285,9 +467,11 @@ def get_booked_capacity(booking_date: date) -> Tuple[int, int]:
 
 def clear_mock_database():
     """清理本機測試用記憶體資料庫"""
-    global _MOCK_LOG_DB, _MOCK_CAPACITY_CACHE
+    global _MOCK_LOG_DB, _MOCK_CAPACITY_CACHE, _MOCK_CRM_DB
     _MOCK_LOG_DB = []
     _MOCK_CAPACITY_CACHE = {}
+    _MOCK_CRM_DB = {}
+
 
 
 class SheetsService:

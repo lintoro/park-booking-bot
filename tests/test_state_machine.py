@@ -228,3 +228,34 @@ def test_user_actual_screenshot_case_bento_and_cancel():
     assert "歡迎使用遊樂園團體預約" not in r_cancel.reply_text
     session = sm.get_or_create_session(user_id)
     assert session.current_step == 0
+
+
+def test_step_8_modify_menu_does_not_reset_all_data():
+    """測試在 Step 8 點選修改按鈕時，展現微調選單，不直接清空重填"""
+    sm = ConversationStateMachine()
+    user_id = "test_user_modify_menu"
+    session = sm.get_or_create_session(user_id)
+    session.current_step = 8
+    session.data.group_name = "科技創新公司"
+    session.data.contact_name = "張經理"
+    session.data.contact_phone = "0988123456"
+    session.data.booking_date = datetime.now(TAIPEI_TZ).date() + timedelta(days=5)
+    session.data.booking_time = "10:30"
+    session.data.adult_count = 30
+
+    # 1. 客人點擊卡片上的修改按鈕 (送出 action=show_modify_menu 或 我想修改預約資料)
+    r_menu = sm.process_message(user_id, "我想修改預約資料", postback_data="action=show_modify_menu")
+    assert "請選擇要修改的預約項目" in r_menu.reply_text
+    assert session.current_step == 8
+    assert session.data.group_name == "科技創新公司"  # 資料妥善保留
+
+    # 2. 客人點選「改人數」
+    r_mod_count = sm.process_message(user_id, "改人數")
+    assert "人數明細" in r_mod_count.reply_text
+    assert session.editing_step == 5
+
+    # 3. 輸入修改後的「50人」
+    r_done = sm.process_message(user_id, "50人")
+    assert session.data.adult_count == 50
+    assert session.current_step == 8
+    assert "預約確認卡片" in r_done.reply_text or r_done.flex_card is not None

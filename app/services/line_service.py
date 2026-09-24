@@ -100,3 +100,19 @@ def send_reply(
     except Exception as e:
         logger.error(f"發送 LINE 回覆失敗：{e}")
         return False
+
+
+def get_user_profile_name(user_id: str) -> str:
+    """取得 LINE 用戶暱稱（Profile Display Name），若無法獲取則回傳空字串"""
+    if not user_id or user_id in ["anonymous_user", "test_user_id"]:
+        return ""
+    api = get_messaging_api()
+    if not api:
+        return ""
+    try:
+        profile = api.get_profile(user_id)
+        return profile.display_name or ""
+    except Exception as e:
+        logger.debug(f"無法取得 LINE 用戶 profile ({user_id})：{e}")
+        return ""
+

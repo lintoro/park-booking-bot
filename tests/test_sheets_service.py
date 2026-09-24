@@ -28,9 +28,11 @@ def setup_and_teardown(monkeypatch):
 
 
 def test_build_log_row_mapping():
-    """測試 BookingData 轉換為 21 欄預約記錄列之正確性"""
+    """測試 BookingData 轉換為 30 欄全生命週期與 GRM 預約記錄列之正確性"""
     booking = BookingData(
         reservation_id="GRP-20261125-A8B9",
+        user_id="U1234567890abcdef",
+        sales_rep="小張專員",
         booking_date=date(2026, 11, 25),
         booking_time="10:30",
         session_type="上午場",
@@ -47,29 +49,71 @@ def test_build_log_row_mapping():
         total_amount=12600,
         deposit_amount=1260,
         invoice_tax_id="12345678",
-        invoice_title="國泰人壽保險股份有限公司"
+        invoice_title="國泰人壽保險股份有限公司",
+        deposit_status="待收訂金",
+        show_status="待履約",
+        case_status="進行中"
     )
 
     row = build_log_row(booking)
 
-    # 欄位總數必須恰好等於表頭定義 (21 欄)
+    # 欄位總數必須恰好等於表頭定義 (30 欄)
     assert len(row) == len(LOG_HEADERS)
-    assert len(row) == 21
+    assert len(row) == 30
 
     # 驗證重要對應欄位
     assert row[0] == "GRP-20261125-A8B9"  # 預約編號
-    assert row[2] == "2026-11-25"          # 入園日期
-    assert row[3] == "10:30"               # 入場梯次
-    assert row[4] == "上午場"              # 場次類型
-    assert row[5] == "國泰人壽南區登山社"  # 團體名稱
-    assert row[6] == "林志明"              # 聯絡窗口
-    assert row[8] == 40                    # 全票數
-    assert row[11] == 2                    # 遊覽車數
-    assert row[12] == 4                    # 隨隊免票數
-    assert row[14] == 56                   # 入場總人數
-    assert row[15] == 12600                # 門票總額
-    assert row[16] == 1260                 # 10% 訂金
-    assert row[19] == "未付訂"             # 預設訂金審核狀態
+    assert row[2] == "U1234567890abcdef"   # LINE_User_ID
+    assert row[3] == "小張專員"             # 負責業務員
+    assert row[4] == "2026-11-25"          # 入園日期
+    assert row[5] == "10:30"               # 入場梯次
+    assert row[6] == "上午場"              # 場次類型
+    assert row[7] == "國泰人壽南區登山社"  # 團體名稱
+    assert row[8] == "林志明"              # 聯絡窗口
+    assert row[10] == 40                   # 全票數
+    assert row[13] == 2                    # 遊覽車數
+    assert row[14] == 4                    # 隨隊免票數
+    assert row[16] == 56                   # 入場總人數
+    assert row[17] == 12600                # 門票總額
+    assert row[18] == 1260                 # 10% 訂金
+    assert row[21] == "待收訂金"           # 訂金狀態
+    assert row[23] == "待履約"             # 到場狀態
+    assert row[28] == "進行中"             # 案件狀態
+
+
+def test_upsert_customer_crm_profile():
+    """測試 CRM 顧客資料建檔與多次預約累加"""
+    from app.services.sheets_service import _MOCK_CRM_DB, upsert_customer_crm_profile
+
+    user_id = "U9988776655"
+    b1 = BookingData(
+        reservation_id="GRP-001",
+        user_id=user_id,
+        group_name="台積電福利會",
+        contact_name="陳主管",
+        contact_phone="0911-222333",
+        total_amount=50000
+    )
+    upsert_customer_crm_profile(b1, line_display_name="David Chen")
+
+    assert user_id in _MOCK_CRM_DB
+    prof = _MOCK_CRM_DB[user_id]
+    assert prof["LINE暱稱"] == "David Chen"
+    assert prof["客戶團體名稱"] == "台積電福利會"
+    assert prof["累計預約次數"] == 1
+    assert prof["累計消費總額"] == 50000
+
+    # 第二次預約累加
+    b2 = BookingData(
+        reservation_id="GRP-002",
+        user_id=user_id,
+        group_name="台積電研發部",
+        total_amount=60000
+    )
+    upsert_customer_crm_profile(b2, line_display_name="David Chen")
+    assert _MOCK_CRM_DB[user_id]["累計預約次數"] == 2
+    assert _MOCK_CRM_DB[user_id]["累計消費總額"] == 110000
+
 
 
 def test_append_record_and_get_booked_capacity():

@@ -28,6 +28,16 @@ class BookingData(BaseModel):
     total_amount: int = 0
     deposit_amount: int = 0
     reservation_id: str = ""
+    user_id: str = ""
+    sales_rep: str = "業務專員"
+    deposit_status: str = "待收訂金"
+    show_status: str = "待履約"
+    actual_admission_count: int = 0
+    headcount_diff_note: str = ""
+    final_payment_amount: int = 0
+    invoice_status: str = "未開立"
+    case_status: str = "進行中"
+    sales_note: str = ""
 
 
 class UserSession(BaseModel):

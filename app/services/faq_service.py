@@ -151,19 +151,27 @@ def ask_park_faq(question: str) -> str:
             "請依據知識庫內容與守則，以繁體中文親切解答："
         )
 
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
-                temperature=0.3,
-            )
-        )
+        candidate_models = [GEMINI_MODEL]
+        if "gemini-1.5-flash" not in candidate_models:
+            candidate_models.append("gemini-1.5-flash")
 
-        if response and response.text:
-            return response.text.strip()
-        else:
-            return _fallback_keyword_answer(question)
+        for model_name in candidate_models:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_INSTRUCTION,
+                        temperature=0.3,
+                    )
+                )
+                if response and response.text:
+                    return response.text.strip()
+            except Exception as model_err:
+                logger.warning(f"模型 {model_name} 呼叫失敗 ({model_err})，嘗試下一個備援模型...")
+                continue
+
+        return _fallback_keyword_answer(question)
 
     except Exception as e:
         logger.error(f"Gemini API 調用異常：{e}，自動降級為知識庫備援回覆。")
