@@ -1,0 +1,186 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#FB8C00",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "👤 園區團體專屬業務顧問",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "size": "xl"
+      },
+      {
+        "type": "text",
+        "text": "一對一真人專人諮詢服務",
+        "color": "#FFF3E0",
+        "size": "xs",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "baseline",
+            "contents": [
+              {
+                "type": "text",
+                "text": "服務窗口",
+                "color": "#888888",
+                "size": "sm",
+                "flex": 2
+              },
+              {
+                "type": "text",
+                "text": "{{staff_name}}",
+                "color": "#111111",
+                "size": "sm",
+                "weight": "bold",
+                "flex": 4
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "baseline",
+            "contents": [
+              {
+                "type": "text",
+                "text": "業務電話",
+                "color": "#888888",
+                "size": "sm",
+                "flex": 2
+              },
+              {
+                "type": "text",
+                "text": "{{staff_phone}} (分機 {{staff_ext}})",
+                "color": "#E65100",
+                "size": "sm",
+                "weight": "bold",
+                "flex": 4
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "baseline",
+            "contents": [
+              {
+                "type": "text",
+                "text": "服務時間",
+                "color": "#888888",
+                "size": "sm",
+                "flex": 2
+              },
+              {
+                "type": "text",
+                "text": "{{service_hours}}",
+                "color": "#111111",
+                "size": "sm",
+                "flex": 4
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "lg"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "lg",
+        "spacing": "xs",
+        "contents": [
+          {
+            "type": "text",
+            "text": "⭐ 專人服務範疇",
+            "weight": "bold",
+            "size": "sm",
+            "color": "#333333"
+          },
+          {
+            "type": "text",
+            "text": "• 100人以上大宗團體議價與專案契約用印",
+            "size": "xs",
+            "color": "#666666"
+          },
+          {
+            "type": "text",
+            "text": "• 園區團餐、特製素食與宴席包場規劃",
+            "size": "xs",
+            "color": "#666666"
+          },
+          {
+            "type": "text",
+            "text": "• 企業家庭日、校外教學專屬活動設計",
+            "size": "xs",
+            "color": "#666666"
+          }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "lg"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "lg",
+        "contents": [
+          {
+            "type": "text",
+            "text": "💬 目前機器人自動回覆已暫停，您可直接於此聊天室打字留言，專人將於上班時間立即為您服務！",
+            "size": "xs",
+            "color": "#5D4037",
+            "wrap": true
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#FB8C00",
+        "height": "sm",
+        "action": {
+          "type": "uri",
+          "label": "📞 一鍵撥打業務專線",
+          "uri": "tel:{{staff_phone_raw}}"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "🤖 恢復自動化預約機器人",
+          "data": "action=resume_bot",
+          "displayText": "我想切換回自動化預約機器人"
+        }
+      }
+    ]
+  }
+}

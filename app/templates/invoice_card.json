@@ -1,0 +1,96 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#455A64",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "🧾 選擇發票開立方式",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "size": "xl"
+      },
+      {
+        "type": "text",
+        "text": "可開立個人二聯式或公司三聯式統一編號發票",
+        "color": "#ECEFF1",
+        "size": "xs",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "📌 發票開立說明",
+        "weight": "bold",
+        "size": "sm",
+        "color": "#111111"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "sm",
+        "spacing": "xs",
+        "contents": [
+          { "type": "text", "text": "• 若不需報帳，可點選「個人二聯式發票 (免統編)」", "size": "xs", "color": "#555555" },
+          { "type": "text", "text": "• 若需報帳，請輸入統編與公司抬頭（例如：統編 12345678 台灣大學）", "size": "xs", "color": "#455A64", "weight": "bold" }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "md"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "sm",
+        "margin": "md",
+        "contents": [
+          {
+            "type": "button",
+            "style": "primary",
+            "color": "#455A64",
+            "height": "sm",
+            "action": {
+              "type": "message",
+              "label": "📄 個人二聯式發票 (免統編)",
+              "text": "免統編"
+            }
+          },
+          {
+            "type": "button",
+            "style": "secondary",
+            "height": "sm",
+            "action": {
+              "type": "message",
+              "label": "🏢 公司三聯式發票 (點我查看範例)",
+              "text": "統編範例"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      {
+        "type": "text",
+        "text": "💡 亦可直接輸入：如「統編 88888888 某某企業」",
+        "size": "xs",
+        "color": "#888888",
+        "align": "center"
+      }
+    ]
+  }
+}

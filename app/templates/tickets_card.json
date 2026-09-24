@@ -1,0 +1,156 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#FF6F00",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "🎟️ 園區門票與團體特惠",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "size": "xl"
+      },
+      {
+        "type": "text",
+        "text": "滿 20 人即享團體特惠價與專屬福利",
+        "color": "#FFF3E0",
+        "size": "xs",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "📋 門票收費標準",
+        "weight": "bold",
+        "size": "sm",
+        "color": "#111111"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "md",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "全票 (成人)", "size": "sm", "color": "#555555", "flex": 3 },
+              { "type": "text", "text": "NT$ 280 / 人", "size": "sm", "weight": "bold", "color": "#E65100", "align": "end", "flex": 2 }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "半票 (7~12歲/65歲長者)", "size": "sm", "color": "#555555", "flex": 3 },
+              { "type": "text", "text": "NT$ 140 / 人", "size": "sm", "weight": "bold", "color": "#E65100", "align": "end", "flex": 2 }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "幼童票 (6歲以下)", "size": "sm", "color": "#555555", "flex": 3 },
+              { "type": "text", "text": "免費 (NT$ 0)", "size": "sm", "weight": "bold", "color": "#2E7D32", "align": "end", "flex": 2 }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "隨隊司領 (每車贈2名)", "size": "sm", "color": "#555555", "flex": 3 },
+              { "type": "text", "text": "免費優待", "size": "sm", "weight": "bold", "color": "#2E7D32", "align": "end", "flex": 2 }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "lg"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "md",
+        "spacing": "xs",
+        "contents": [
+          {
+            "type": "text",
+            "text": "💡 團體專屬權益",
+            "weight": "bold",
+            "size": "xs",
+            "color": "#333333"
+          },
+          {
+            "type": "text",
+            "text": "• 團體最低 20 人成團（不含幼童免票與司領）",
+            "size": "xs",
+            "color": "#777777"
+          },
+          {
+            "type": "text",
+            "text": "• 僅需預付 10% 訂金，即可保留入園梯次與免費停車位",
+            "size": "xs",
+            "color": "#777777"
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#FF6F00",
+        "height": "sm",
+        "action": {
+          "type": "message",
+          "label": "🎡 立即線上預約",
+          "text": "我要預約"
+        }
+      },
+      {
+        "type": "box",
+        "layout": "horizontal",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "button",
+            "style": "secondary",
+            "height": "sm",
+            "action": {
+              "type": "message",
+              "label": "試算30人",
+              "text": "試算30人門票"
+            }
+          },
+          {
+            "type": "button",
+            "style": "secondary",
+            "height": "sm",
+            "action": {
+              "type": "message",
+              "label": "試算40人",
+              "text": "試算40人門票"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

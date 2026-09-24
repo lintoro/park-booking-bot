@@ -1,0 +1,130 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#D81B60",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "🚌 登記交通車輛與司領免票",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "size": "xl"
+      },
+      {
+        "type": "text",
+        "text": "每 1 台大巴遊覽車，享 2 位隨隊司領免門票",
+        "color": "#FCE4EC",
+        "size": "xs",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "🅿️ 專屬遊覽車優惠與停車規範",
+        "weight": "bold",
+        "size": "sm",
+        "color": "#111111"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "sm",
+        "spacing": "xs",
+        "contents": [
+          { "type": "text", "text": "• 園區備有大型遊覽車專用免費停車格", "size": "xs", "color": "#555555" },
+          { "type": "text", "text": "• 登記每台車享司機＋隨隊領隊共 2 名免票入園", "size": "xs", "color": "#C2185B", "weight": "bold" },
+          { "type": "text", "text": "• 請直接點選貴團預計搭乘之遊覽車數量：", "size": "xs", "color": "#333333" }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "md"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "xs",
+        "margin": "md",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "🚗 0台 (自駕/散客)",
+                  "text": "0台"
+                }
+              },
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "🚌 1台 (贈2名免票)",
+                  "text": "1台"
+                }
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "🚌 2台 (贈4名免票)",
+                  "text": "2台"
+                }
+              },
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "🚌 3台 (贈6名免票)",
+                  "text": "3台"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      {
+        "type": "text",
+        "text": "💡 4 台以上遊覽車請直接輸入如「4台」",
+        "size": "xs",
+        "color": "#888888",
+        "align": "center"
+      }
+    ]
+  }
+}

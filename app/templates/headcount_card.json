@@ -1,0 +1,129 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#388E3C",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "👥 選擇入園人數規模",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "size": "xl"
+      },
+      {
+        "type": "text",
+        "text": "團體滿 20 人成團，可點選常用人數或直接打字",
+        "color": "#E8F5E9",
+        "size": "xs",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "🎫 票價計費標準",
+        "weight": "bold",
+        "size": "sm",
+        "color": "#111111"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "sm",
+        "spacing": "xs",
+        "contents": [
+          { "type": "text", "text": "▪ 全票 NT$ 280 / 半票 NT$ 140 / 幼童免費", "size": "xs", "color": "#555555" },
+          { "type": "text", "text": "▪ 點選以下常用成團規模，或直接輸入如「40人」：", "size": "xs", "color": "#2E7D32", "weight": "bold" }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "md"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "xs",
+        "margin": "md",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "20人標準團",
+                  "text": "全票20"
+                }
+              },
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "30人歡樂團",
+                  "text": "全票25 半票5"
+                }
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "40人大型團",
+                  "text": "全票30 半票10"
+                }
+              },
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "50人旗艦團",
+                  "text": "全票40 半票10"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "contents": [
+      {
+        "type": "text",
+        "text": "💡 亦可直接打字輸入：如「全票35 半票5 幼童2」",
+        "size": "xs",
+        "color": "#888888",
+        "align": "center"
+      }
+    ]
+  }
+}

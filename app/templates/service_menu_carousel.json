@@ -1,0 +1,385 @@
+{
+  "type": "carousel",
+  "contents": [
+    {
+      "type": "bubble",
+      "size": "kilo",
+      "header": {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#1E88E5",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "text",
+            "text": "🎡 團體入園預約",
+            "weight": "bold",
+            "size": "lg",
+            "color": "#FFFFFF"
+          },
+          {
+            "type": "text",
+            "text": "20人以上專屬成團優惠",
+            "size": "xs",
+            "color": "#E3F2FD",
+            "margin": "xs"
+          }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "md",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "xs",
+            "contents": [
+              {
+                "type": "text",
+                "text": "▪ 最低 20 人即享團體特惠價",
+                "size": "sm",
+                "color": "#333333"
+              },
+              {
+                "type": "text",
+                "text": "▪ 每 1 台遊覽車贈 2 位司領免票",
+                "size": "sm",
+                "color": "#333333"
+              },
+              {
+                "type": "text",
+                "text": "▪ 10% 彈性訂金保證名額與車位",
+                "size": "sm",
+                "color": "#333333"
+              }
+            ]
+          },
+          {
+            "type": "separator",
+            "margin": "md"
+          },
+          {
+            "type": "text",
+            "text": "全票 NT$ 280 / 半票 NT$ 140",
+            "size": "xs",
+            "color": "#757575"
+          }
+        ]
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "button",
+            "style": "primary",
+            "color": "#1E88E5",
+            "action": {
+              "type": "message",
+              "label": "👉 立即開始預約",
+              "text": "我要預約"
+            }
+          },
+          {
+            "type": "button",
+            "style": "secondary",
+            "action": {
+              "type": "message",
+              "label": "ℹ️ 查看預約須知",
+              "text": "預約須知"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "bubble",
+      "size": "kilo",
+      "header": {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#00897B",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "text",
+            "text": "🎟️ 票務與試算",
+            "weight": "bold",
+            "size": "lg",
+            "color": "#FFFFFF"
+          },
+          {
+            "type": "text",
+            "text": "票價細則與免票優惠標準",
+            "size": "xs",
+            "color": "#E0F2F1",
+            "margin": "xs"
+          }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "md",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "xs",
+            "contents": [
+              {
+                "type": "text",
+                "text": "▪ 全票：NT$ 280 /人 (滿12歲)",
+                "size": "sm",
+                "color": "#333333"
+              },
+              {
+                "type": "text",
+                "text": "▪ 半票：NT$ 140 /人 (7~12歲/長者)",
+                "size": "sm",
+                "color": "#333333"
+              },
+              {
+                "type": "text",
+                "text": "▪ 幼童：NT$ 0 免票 (6歲以下)",
+                "size": "sm",
+                "color": "#333333"
+              }
+            ]
+          },
+          {
+            "type": "separator",
+            "margin": "md"
+          },
+          {
+            "type": "text",
+            "text": "入園日前 3 天可免費改期一次",
+            "size": "xs",
+            "color": "#757575"
+          }
+        ]
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "button",
+            "style": "primary",
+            "color": "#00897B",
+            "action": {
+              "type": "message",
+              "label": "💰 票價試算諮詢",
+              "text": "團體票價怎麼算"
+            }
+          },
+          {
+            "type": "button",
+            "style": "secondary",
+            "action": {
+              "type": "message",
+              "label": "📋 退訂與改期政策",
+              "text": "改期規定"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "bubble",
+      "size": "kilo",
+      "header": {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#E53935",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "text",
+            "text": "🎢 設施與導覽",
+            "weight": "bold",
+            "size": "lg",
+            "color": "#FFFFFF"
+          },
+          {
+            "type": "text",
+            "text": "熱門設施介紹與專人導覽",
+            "size": "xs",
+            "color": "#FFEBEE",
+            "margin": "xs"
+          }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "md",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "xs",
+            "contents": [
+              {
+                "type": "text",
+                "text": "▪ 星際極速雲霄飛車 (時速95km)",
+                "size": "sm",
+                "color": "#333333"
+              },
+              {
+                "type": "text",
+                "text": "▪ 水上激流探險泛舟 (15m瀑布)",
+                "size": "sm",
+                "color": "#333333"
+              },
+              {
+                "type": "text",
+                "text": "▪ 定時導覽：每日 10:30 & 14:00",
+                "size": "sm",
+                "color": "#333333"
+              }
+            ]
+          },
+          {
+            "type": "separator",
+            "margin": "md"
+          },
+          {
+            "type": "text",
+            "text": "集合點：正門歡樂城堡前鐘樓廣場",
+            "size": "xs",
+            "color": "#757575"
+          }
+        ]
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "button",
+            "style": "primary",
+            "color": "#E53935",
+            "action": {
+              "type": "message",
+              "label": "⏰ 查看定時導覽",
+              "text": "導覽時間"
+            }
+          },
+          {
+            "type": "button",
+            "style": "secondary",
+            "action": {
+              "type": "message",
+              "label": "🗺️ 熱門設施一覽",
+              "text": "園區設施"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "bubble",
+      "size": "kilo",
+      "header": {
+        "type": "box",
+        "layout": "vertical",
+        "backgroundColor": "#6A1B9A",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "text",
+            "text": "📞 專人客服與餐飲",
+            "weight": "bold",
+            "size": "lg",
+            "color": "#FFFFFF"
+          },
+          {
+            "type": "text",
+            "text": "大宗企業日、便當與合約用印",
+            "size": "xs",
+            "color": "#F3E5F5",
+            "margin": "xs"
+          }
+        ]
+      },
+      "body": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "md",
+        "paddingAll": "16px",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "xs",
+            "contents": [
+              {
+                "type": "text",
+                "text": "▪ 100 人以上大宗專案規劃",
+                "size": "sm",
+                "color": "#333333"
+              },
+              {
+                "type": "text",
+                "text": "▪ 葷素團體便當預訂 (NT$ 100/150)",
+                "size": "sm",
+                "color": "#333333"
+              },
+              {
+                "type": "text",
+                "text": "▪ 專屬業務一對一專線支援",
+                "size": "sm",
+                "color": "#333333"
+              }
+            ]
+          },
+          {
+            "type": "separator",
+            "margin": "md"
+          },
+          {
+            "type": "text",
+            "text": "服務時間：平日 09:00 ～ 18:00",
+            "size": "xs",
+            "color": "#757575"
+          }
+        ]
+      },
+      "footer": {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "button",
+            "style": "primary",
+            "color": "#6A1B9A",
+            "action": {
+              "type": "message",
+              "label": "📞 轉接專人服務",
+              "text": "客服"
+            }
+          },
+          {
+            "type": "button",
+            "style": "secondary",
+            "action": {
+              "type": "message",
+              "label": "🍱 團體便當與素食",
+              "text": "便當餐飲"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,331 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#1E88E5",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "🎡 團體預約確認單",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "size": "xl"
+      },
+      {
+        "type": "text",
+        "text": "請核對以下預約資訊是否正確",
+        "color": "#E3F2FD",
+        "size": "xs",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "none",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "baseline",
+            "contents": [
+              {
+                "type": "text",
+                "text": "團體名稱",
+                "color": "#888888",
+                "size": "sm",
+                "flex": 2
+              },
+              {
+                "type": "text",
+                "text": "{{group_name}}",
+                "color": "#111111",
+                "size": "sm",
+                "weight": "bold",
+                "flex": 4,
+                "wrap": true
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "baseline",
+            "contents": [
+              {
+                "type": "text",
+                "text": "聯絡窗口",
+                "color": "#888888",
+                "size": "sm",
+                "flex": 2
+              },
+              {
+                "type": "text",
+                "text": "{{contact_name}} ({{contact_phone}})",
+                "color": "#111111",
+                "size": "sm",
+                "flex": 4,
+                "wrap": true
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "baseline",
+            "contents": [
+              {
+                "type": "text",
+                "text": "入園梯次",
+                "color": "#888888",
+                "size": "sm",
+                "flex": 2
+              },
+              {
+                "type": "text",
+                "text": "{{booking_date}} {{booking_time}} ({{session_type}})",
+                "color": "#E65100",
+                "size": "sm",
+                "weight": "bold",
+                "flex": 4
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "lg"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "lg",
+        "spacing": "xs",
+        "contents": [
+          {
+            "type": "text",
+            "text": "📋 人數與車輛明細",
+            "weight": "bold",
+            "size": "sm",
+            "color": "#333333"
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "• 全票 ($280)",
+                "size": "xs",
+                "color": "#666666"
+              },
+              {
+                "type": "text",
+                "text": "{{adult_count}} 位 (NT$ {{adult_subtotal}})",
+                "size": "xs",
+                "color": "#333333",
+                "align": "end"
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "• 半票 ($140)",
+                "size": "xs",
+                "color": "#666666"
+              },
+              {
+                "type": "text",
+                "text": "{{concession_count}} 位 (NT$ {{concession_subtotal}})",
+                "size": "xs",
+                "color": "#333333",
+                "align": "end"
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "• 幼童 (免票)",
+                "size": "xs",
+                "color": "#666666"
+              },
+              {
+                "type": "text",
+                "text": "{{child_count}} 位",
+                "size": "xs",
+                "color": "#333333",
+                "align": "end"
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "• 遊覽車台數",
+                "size": "xs",
+                "color": "#666666"
+              },
+              {
+                "type": "text",
+                "text": "{{tour_bus_count}} 台 (司領免票 {{free_crew_count}} 位)",
+                "size": "xs",
+                "color": "#00796B",
+                "align": "end"
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "• 入園總人數",
+                "size": "xs",
+                "weight": "bold",
+                "color": "#333333"
+              },
+              {
+                "type": "text",
+                "text": "共 {{total_admission_count}} 位",
+                "size": "xs",
+                "weight": "bold",
+                "color": "#1E88E5",
+                "align": "end"
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "• 發票統一編號",
+                "size": "xs",
+                "color": "#666666"
+              },
+              {
+                "type": "text",
+                "text": "{{tax_id_info}}",
+                "size": "xs",
+                "color": "#333333",
+                "align": "end"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "lg"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "lg",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              {
+                "type": "text",
+                "text": "門票總金額",
+                "size": "md",
+                "weight": "bold",
+                "color": "#111111"
+              },
+              {
+                "type": "text",
+                "text": "NT$ {{total_amount}} 元",
+                "size": "lg",
+                "weight": "bold",
+                "color": "#D32F2F",
+                "align": "end"
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "margin": "xs",
+            "contents": [
+              {
+                "type": "text",
+                "text": "10% 彈性訂金",
+                "size": "xs",
+                "color": "#666666"
+              },
+              {
+                "type": "text",
+                "text": "NT$ {{deposit_amount}} 元",
+                "size": "sm",
+                "weight": "bold",
+                "color": "#2E7D32",
+                "align": "end"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": "💡 說明：已付 10% 訂金享【保證保留】名額；未付訂金僅為意向登記，尖峰日額滿恕不保證入場。",
+            "size": "xxs",
+            "color": "#888888",
+            "wrap": true,
+            "margin": "md"
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#1E88E5",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "✅ 確認送出預約",
+          "data": "action=confirm_booking&session_id={{session_id}}",
+          "displayText": "確認送出預約"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "postback",
+          "label": "✏️ 重新填寫 / 修改",
+          "data": "action=restart_booking&session_id={{session_id}}",
+          "displayText": "我想重新填寫預約資料"
+        }
+      }
+    ]
+  }
+}

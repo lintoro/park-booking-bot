@@ -1,0 +1,123 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#00897B",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "⏰ 選擇入園時段梯次",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "size": "xl"
+      },
+      {
+        "type": "text",
+        "text": "預約日期：{{booking_date}}",
+        "color": "#E0F2F1",
+        "size": "xs",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "xs",
+        "contents": [
+          {
+            "type": "text",
+            "text": "📌 梯次規範與管制說明",
+            "weight": "bold",
+            "size": "sm",
+            "color": "#111111"
+          },
+          {
+            "type": "text",
+            "text": "• 上午場 (10:00～13:00，容量上限 400 人)",
+            "size": "xs",
+            "color": "#666666"
+          },
+          {
+            "type": "text",
+            "text": "• 下午場 (13:00～17:00，容量上限 600 人)",
+            "size": "xs",
+            "color": "#666666"
+          },
+          {
+            "type": "text",
+            "text": "• 團體最後入場為 17:00，17:00 以後嚴禁預約入場",
+            "size": "xs",
+            "color": "#E53935",
+            "weight": "bold"
+          }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "lg"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "lg",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "text",
+            "text": "🕒 當前可預約梯次狀態",
+            "weight": "bold",
+            "size": "sm",
+            "color": "#111111"
+          },
+          {
+            "type": "text",
+            "text": "{{status_notice}}",
+            "size": "xs",
+            "color": "#00796B",
+            "wrap": true
+          },
+          {
+            "type": "box",
+            "layout": "vertical",
+            "margin": "md",
+            "spacing": "sm",
+            "contents": [
+              {
+                "type": "text",
+                "text": "請直接點選下方時段按鈕或輸入時間（例如 10:30）：",
+                "size": "xs",
+                "color": "#888888"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "contents": [
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "message",
+          "label": "🔙 重新選擇其他日期",
+          "text": "重新選擇日期"
+        }
+      }
+    ]
+  }
+}

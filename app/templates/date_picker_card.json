@@ -1,0 +1,169 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#0288D1",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "📅 選擇預約入園日期",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "size": "xl"
+      },
+      {
+        "type": "text",
+        "text": "請點選下方按鈕或開啟日曆選擇",
+        "color": "#E1F5FE",
+        "size": "xs",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "📌 入園預約規範",
+        "weight": "bold",
+        "size": "sm",
+        "color": "#111111"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "sm",
+        "spacing": "xs",
+        "contents": [
+          {
+            "type": "text",
+            "text": "• 團體預約開放預約未來檔期",
+            "size": "xs",
+            "color": "#666666"
+          },
+          {
+            "type": "text",
+            "text": "• 若預約當日急單，最晚請於 15:00 前提出",
+            "size": "xs",
+            "color": "#666666"
+          },
+          {
+            "type": "text",
+            "text": "• 亦可直接打字輸入：如「明天」、「下週三」或「11/20」",
+            "size": "xs",
+            "color": "#0288D1"
+          }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "lg"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "md",
+        "spacing": "xs",
+        "contents": [
+          {
+            "type": "text",
+            "text": "⚡ 快捷熱門檔期點選",
+            "weight": "bold",
+            "size": "xs",
+            "color": "#333333"
+          }
+        ]
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "spacing": "xs",
+        "margin": "sm",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "{{quick_date_1_label}}",
+                  "text": "{{quick_date_1_val}}"
+                }
+              },
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "{{quick_date_2_label}}",
+                  "text": "{{quick_date_2_val}}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "spacing": "sm",
+            "contents": [
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "{{quick_date_3_label}}",
+                  "text": "{{quick_date_3_val}}"
+                }
+              },
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "action": {
+                  "type": "message",
+                  "label": "{{quick_date_4_label}}",
+                  "text": "{{quick_date_4_val}}"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#0288D1",
+        "height": "sm",
+        "action": {
+          "type": "datetimepicker",
+          "label": "📅 開啟手機日曆挑選日期",
+          "data": "action=select_date",
+          "mode": "date",
+          "initial": "{{initial_date}}",
+          "min": "{{min_date}}",
+          "max": "{{max_date}}"
+        }
+      }
+    ]
+  }
+}

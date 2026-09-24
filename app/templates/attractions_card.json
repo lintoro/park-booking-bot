@@ -1,0 +1,139 @@
+{
+  "type": "bubble",
+  "size": "mega",
+  "header": {
+    "type": "box",
+    "layout": "vertical",
+    "backgroundColor": "#7B1FA2",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "🎢 園區設施與導覽資訊",
+        "weight": "bold",
+        "color": "#FFFFFF",
+        "size": "xl"
+      },
+      {
+        "type": "text",
+        "text": "全園 30+ 項熱門遊樂設施與豐富活動",
+        "color": "#F3E5F5",
+        "size": "xs",
+        "margin": "sm"
+      }
+    ]
+  },
+  "body": {
+    "type": "box",
+    "layout": "vertical",
+    "paddingAll": "20px",
+    "contents": [
+      {
+        "type": "text",
+        "text": "🌟 人氣推薦熱門設施",
+        "weight": "bold",
+        "size": "sm",
+        "color": "#111111"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "md",
+        "spacing": "sm",
+        "contents": [
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "🎡 景觀摩天輪", "size": "sm", "weight": "bold", "color": "#7B1FA2", "flex": 3 },
+              { "type": "text", "text": "全景俯瞰山海美景", "size": "xs", "color": "#666666", "flex": 4, "align": "end" }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "🎢 極速雲霄飛車", "size": "sm", "weight": "bold", "color": "#7B1FA2", "flex": 3 },
+              { "type": "text", "text": "重力加速度極限快感", "size": "xs", "color": "#666666", "flex": 4, "align": "end" }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "🎠 夢幻旋轉木馬", "size": "sm", "weight": "bold", "color": "#7B1FA2", "flex": 3 },
+              { "type": "text", "text": "親子共遊拍照聖地", "size": "xs", "color": "#666666", "flex": 4, "align": "end" }
+            ]
+          },
+          {
+            "type": "box",
+            "layout": "horizontal",
+            "contents": [
+              { "type": "text", "text": "🌊 激流漂漂河", "size": "sm", "weight": "bold", "color": "#7B1FA2", "flex": 3 },
+              { "type": "text", "text": "夏日清涼消暑首選", "size": "xs", "color": "#666666", "flex": 4, "align": "end" }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "separator",
+        "margin": "lg"
+      },
+      {
+        "type": "box",
+        "layout": "vertical",
+        "margin": "md",
+        "spacing": "xs",
+        "contents": [
+          {
+            "type": "text",
+            "text": "📢 團體導覽與開放時間",
+            "weight": "bold",
+            "size": "xs",
+            "color": "#333333"
+          },
+          {
+            "type": "text",
+            "text": "• 每日 10:30、14:00 提供免費定點專人導覽",
+            "size": "xs",
+            "color": "#777777"
+          },
+          {
+            "type": "text",
+            "text": "• 營運時間：平日 10:00～18:00、假日 10:00～19:00",
+            "size": "xs",
+            "color": "#777777"
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "type": "box",
+    "layout": "vertical",
+    "spacing": "sm",
+    "contents": [
+      {
+        "type": "button",
+        "style": "primary",
+        "color": "#7B1FA2",
+        "height": "sm",
+        "action": {
+          "type": "message",
+          "label": "🎡 預約團體入園",
+          "text": "我要預約"
+        }
+      },
+      {
+        "type": "button",
+        "style": "secondary",
+        "height": "sm",
+        "action": {
+          "type": "message",
+          "label": "📞 專人諮詢服務",
+          "text": "真人客服"
+        }
+      }
+    ]
+  }
+}
