@@ -19,7 +19,7 @@ TIMEZONE: str = os.getenv("TIMEZONE", "Asia/Taipei")
 # --- Google 雲端試算表設定 ---
 GOOGLE_SPREADSHEET_ID: str = os.getenv("GOOGLE_SPREADSHEET_ID", "")
 GOOGLE_CREDENTIALS_FILE: str = os.getenv("GOOGLE_CREDENTIALS_FILE", "credentials.json")
-GOOGLE_CREDENTIALS_JSON: str = os.getenv("GOOGLE_CREDENTIALS_JSON", "")  # 供 Render 等雲端環境直接注入 JSON 內容
+GOOGLE_CREDENTIALS_JSON: str = os.getenv("GOOGLE_CREDENTIALS_JSON", os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", ""))  # 支援雲端環境注入完整 JSON 內容
 
 
 # --- Google Gemini AI 模型設定 ---
