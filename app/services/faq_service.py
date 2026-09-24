@@ -297,29 +297,40 @@ def ask_park_faq(question: str) -> str:
             "請嚴格遵從 System Instruction 中的安全守則與領域限制，以繁體中文親切解答："
         )
 
+        # 官方現役有效之 3.x Flash 模型序列 (全面淘汰已下線之舊版 1.5/2.0 模型)
         candidate_models = [active_model]
-        if "gemini-1.5-flash" not in candidate_models:
-            candidate_models.append("gemini-1.5-flash")
+        for fallback_m in ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-3.7-flash"]:
+            if fallback_m not in candidate_models:
+                candidate_models.append(fallback_m)
 
         for model_name in candidate_models:
-            try:
-                logger.info(f"正在呼叫 Gemini 模型 [{model_name}] 解答問題: {question[:30]}...")
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_INSTRUCTION,
-                        temperature=0.3,
-                        max_output_tokens=600,
+            # 支援 503 暫時尖峰高負載之自動退避重試機制 (最多重試 2 次)
+            for attempt in range(2):
+                try:
+                    logger.info(f"正在呼叫 Gemini 模型 [{model_name}] (嘗試 {attempt+1}/2) 解答問題: {question[:30]}...")
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_INSTRUCTION,
+                            temperature=0.3,
+                            max_output_tokens=600,
+                        )
                     )
-                )
-                if response and response.text:
-                    cleaned_reply = _sanitize_output(response.text)
-                    logger.info(f"Gemini [{model_name}] 回應成功 (長度: {len(cleaned_reply)})")
-                    return cleaned_reply
-            except Exception as model_err:
-                logger.warning(f"模型 [{model_name}] 呼叫異常 ({model_err})，嘗試備援方案...")
-                continue
+                    if response and response.text:
+                        cleaned_reply = _sanitize_output(response.text)
+                        logger.info(f"Gemini [{model_name}] 回應成功 (長度: {len(cleaned_reply)})")
+                        return cleaned_reply
+                except Exception as model_err:
+                    err_str = str(model_err)
+                    if "503" in err_str or "UNAVAILABLE" in err_str:
+                        logger.warning(f"模型 [{model_name}] 遭遇 503 暫時尖峰，1 秒後自動重試...")
+                        import time
+                        time.sleep(1.0)
+                        continue
+                    else:
+                        logger.warning(f"模型 [{model_name}] 呼叫異常 ({err_str})，切換備援模型...")
+                        break
 
         # 若模型皆無回應則降級
         return _fallback_keyword_answer(question)
