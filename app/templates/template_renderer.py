@@ -409,3 +409,119 @@ def render_reservation_detail_card(record: Dict[str, Any]) -> Dict[str, Any]:
     return bubble
 
 
+def render_guided_menu_card(
+    title: str = "🎡 智慧服務功能導引",
+    message: str = "您好！小幫手專注於為您提供園區熱門設施、門票優惠與團體預約相關服務。請點選下方功能，我們將竭誠為您服務："
+) -> Dict[str, Any]:
+    """
+    渲染【制式服務功能導引卡片 (Flex Message)】
+    當遊客提問偏離領域或詢問無關問題時，彈出制式按鈕引導回核心功能，限制住回應範圍。
+    """
+    return {
+        "type": "bubble",
+        "size": "mega",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": "#1565C0",
+            "paddingAll": "16px",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": title,
+                    "weight": "bold",
+                    "size": "lg",
+                    "color": "#FFFFFF"
+                },
+                {
+                    "type": "text",
+                    "text": "星夢歡樂世界 ‧ 官方專屬服務指南",
+                    "size": "xs",
+                    "color": "#E3F2FD",
+                    "margin": "xs"
+                }
+            ]
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "md",
+            "paddingAll": "16px",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": message,
+                    "size": "sm",
+                    "color": "#333333",
+                    "wrap": True
+                },
+                {
+                    "type": "separator",
+                    "margin": "md"
+                },
+                {
+                    "type": "box",
+                    "layout": "vertical",
+                    "spacing": "sm",
+                    "contents": [
+                        {
+                            "type": "button",
+                            "style": "primary",
+                            "color": "#E65100",
+                            "height": "sm",
+                            "action": {
+                                "type": "message",
+                                "label": "👉 我要預約 (20人以上優惠)",
+                                "text": "👉 我要預約"
+                            }
+                        },
+                        {
+                            "type": "button",
+                            "style": "secondary",
+                            "height": "sm",
+                            "action": {
+                                "type": "message",
+                                "label": "📋 預約查詢 (進度與取消)",
+                                "text": "📋 預約查詢"
+                            }
+                        },
+                        {
+                            "type": "button",
+                            "style": "secondary",
+                            "height": "sm",
+                            "action": {
+                                "type": "message",
+                                "label": "💰 票價試算 (各票種與免票)",
+                                "text": "💰 票價試算"
+                            }
+                        },
+                        {
+                            "type": "button",
+                            "style": "secondary",
+                            "height": "sm",
+                            "action": {
+                                "type": "message",
+                                "label": "📞 專人客服 (業務一對一)",
+                                "text": "📞 專人客服"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        "footer": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": "💡 亦可直接在聊天室輸入您的需求",
+                    "size": "xs",
+                    "color": "#888888",
+                    "align": "center"
+                }
+            ]
+        }
+    }
+
+

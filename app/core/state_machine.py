@@ -53,6 +53,7 @@ from app.templates.template_renderer import (
     render_bus_card,
     render_invoice_card,
     render_reservation_detail_card,
+    render_guided_menu_card,
 )
 from app.services.sheets_service import (
     append_reservation_record,
@@ -61,7 +62,7 @@ from app.services.sheets_service import (
     cancel_existing_reservation,
     check_duplicate_booking,
 )
-from app.services.faq_service import ask_park_faq
+from app.services.faq_service import ask_park_faq, is_off_topic_query
 from app.core.models import BookingData, UserSession, BotResponse
 from app.core.relaxed_parsers import (
     parse_relaxed_date,
@@ -128,7 +129,7 @@ def is_query_reservation_intent(text: str) -> bool:
     if re.search(r"預約.*成功.*[嗎嘛]", t):
         return True
     query_keywords = [
-        "查詢預約", "查預約", "我的預約", "預約紀錄", "預約記錄", 
+        "預約查詢", "查詢預約", "查預約", "我的預約", "預約紀錄", "預約記錄", 
         "查訂單", "我的訂單", "訂單查詢", "查詢既有預約",
         "預約進度", "查看預約", "查我的預約", "是否有預約成功",
         "有沒有預約成功", "確認預約成功"
@@ -430,6 +431,15 @@ class ConversationStateMachine:
             self.reset_session(user_id)
             session = self.get_or_create_session(user_id)
             return self._step_0_start(session, timeout_prefix)
+        elif session.current_step > 0 and msg.strip() in ["👉 我要預約", "我要預約", "開始預約", "團體預約"]:
+            return BotResponse(
+                reply_text=(
+                    f"{timeout_prefix}📌 您目前正在進行團體預約填寫中（步驟 {session.current_step}）！\n\n"
+                    f"• 若想【重新開始填寫】，請點選下方「🔄 全部重新填寫」。\n"
+                    f"• 若想【放棄本次預約】，請點選下方「❌ 取消預約」。"
+                ),
+                quick_replies=["全部重新填寫", "取消預約"]
+            )
 
         # 5. 【指定修改處理】：若處於 Step 8 (確認卡片)，檢查使用者是否發動單獨修改某欄位
         if session.current_step == 8:
@@ -471,7 +481,16 @@ class ConversationStateMachine:
                 )
 
             faq_reply = ask_park_faq(msg)
-            return BotResponse(reply_text=f"{timeout_prefix}{faq_reply}", quick_replies=["我要預約", "選單"])
+            is_off = is_off_topic_query(msg)
+            guided_card = render_guided_menu_card(
+                title="🎡 園區智慧服務指南" if is_off else "🎡 星夢歡樂世界 服務導覽",
+                message="不好意思～小幫手專注於為您解答園區熱門設施、門票優惠與團體預約相關服務。請點選下方功能，我們將竭誠為您服務：" if is_off else "您好！請點選下方功能選單快速辦理，或直接輸入您的預約需求："
+            )
+            return BotResponse(
+                reply_text=f"{timeout_prefix}{faq_reply}",
+                flex_card=guided_card,
+                quick_replies=["👉 我要預約", "📋 預約查詢", "💰 票價試算", "📞 專人客服"]
+            )
 
         elif session.current_step == 1:
             return self._step_1_handle_group_name(session, msg, timeout_prefix)
@@ -518,6 +537,11 @@ class ConversationStateMachine:
         # 1. 提問與諮詢防呆：若輸入為園區問題或問句，智慧解答並引導繼續預約或取消
         if is_likely_question_or_faq(msg):
             faq_reply = ask_park_faq(msg)
+            is_off = is_off_topic_query(msg)
+            card = render_guided_menu_card(
+                title="🎡 園區智慧服務指南",
+                message="不好意思～小幫手專注於提供園區設施與團體預約服務。您目前正在填寫預約資料，可點選下方功能或繼續填寫："
+            ) if is_off else None
             return BotResponse(
                 reply_text=(
                     f"{prefix}🤖 關於您的詢問，為您說明如下：\n\n{faq_reply}\n\n"
@@ -526,7 +550,8 @@ class ConversationStateMachine:
                     f"若要繼續預約，請輸入您的【團體／學校／公司名稱】（例如：快樂旅行社、幸福國小）；\n"
                     f"若暫不預約，可點選下方【❌ 取消預約】。"
                 ),
-                quick_replies=["取消預約"]
+                flex_card=card,
+                quick_replies=["取消預約", "📞 專人客服"]
             )
 
         clean_name = clean_group_name(msg)
@@ -551,6 +576,11 @@ class ConversationStateMachine:
         # 提問防呆
         if is_likely_question_or_faq(msg):
             faq_reply = ask_park_faq(msg)
+            is_off = is_off_topic_query(msg)
+            card = render_guided_menu_card(
+                title="🎡 園區智慧服務指南",
+                message="不好意思～小幫手專注於提供園區設施與團體預約服務。您目前正在填寫預約資料，可點選下方功能或繼續填寫："
+            ) if is_off else None
             return BotResponse(
                 reply_text=(
                     f"{prefix}🤖 關於您的詢問，為您說明如下：\n\n{faq_reply}\n\n"
@@ -559,7 +589,8 @@ class ConversationStateMachine:
                     f"若要繼續預約，請提供【聯絡人姓名】與【聯絡電話（手機或家機）】（例如：王小明 0912-345678 或 02-23456789）；\n"
                     f"若暫不預約，可點選下方【❌ 取消預約】。"
                 ),
-                quick_replies=["取消預約"]
+                flex_card=card,
+                quick_replies=["取消預約", "📞 專人客服"]
             )
 
         name, phone = parse_contact_info(msg)

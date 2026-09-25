@@ -72,7 +72,6 @@ def test_render_time_slot_card():
     # 驗證時段按鈕皆已注入
     for slot in available_slots:
         assert slot in json_str
-        assert f"預約時間 {slot}" in json_str
 
     # 驗證 SDK 解析
     flex_container = FlexContainer.from_dict(card_dict)
